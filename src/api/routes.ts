@@ -1,0 +1,23 @@
+import { Router } from 'express';
+import multer from 'multer';
+import path from 'path';
+import os from 'os';
+import { ingestController } from './controllers/ingestController.js';
+
+const router = Router();
+
+const upload = multer({
+    dest: os.tmpdir(),
+    limits: { fileSize: 10 * 1024 * 1024 },
+    fileFilter: (req, file, cb) => {
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (ext !== '.pdf'){
+            return cb(new Error('Apenas arquivos PDF são permitidos'));
+        }
+        cb(null, true);
+    }
+});
+
+router.post('/ingest', upload.single('file'), ingestController);
+
+export default router;

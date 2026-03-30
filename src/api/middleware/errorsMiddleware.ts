@@ -1,8 +1,6 @@
 import DefaultError from "../errors/DefaultError.js";
+import BadRequest from "../errors/BadRequest.js";
 import multer from 'multer';
-import { EmptyPDFError } from '../../ingestion/errors/EmptyPDFError.js';
-import { OpenAIError } from '../../services/errors/OpenAIError.js';
-import { AnthropicError } from '../../services/errors/AnthropicError.js';
 
 import type { Request, Response, NextFunction } from 'express';
 
@@ -10,12 +8,9 @@ import type { Request, Response, NextFunction } from 'express';
 function errorsMiddleware(error: unknown, request: Request, response: Response, next: NextFunction): void {
     if (error instanceof multer.MulterError) {
         response.status(400).send({ message: error.message, status: 400 });
-    } else if (error instanceof EmptyPDFError) {
-        response.status(400).send({ message: error.message, status: 400 });
-    } else if (error instanceof OpenAIError) {
-        response.status(502).send({ message: error.message, status: 502 });
-    } else if (error instanceof AnthropicError) {
-        response.status(502).send({ message: error.message, status: 502 });
+    } else if (error instanceof Error && !(error instanceof DefaultError)) {
+        // Erros genéricos (ex: fileFilter do multer)
+        new BadRequest(error.message).sendResponse(response);
     } else if (error instanceof DefaultError) {
         error.sendResponse(response);
     } else {

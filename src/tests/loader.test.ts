@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { loadText } from '../ingestion/loader.js';
+import { EmptyDocumentError } from '../ingestion/errors/EmptyDocumentError.js';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
@@ -34,15 +35,15 @@ describe('loadText', () => {
         fs.unlinkSync(filePath);
     });
 
-    it('deve lançar erro para arquivo vazio', async () => {
+    it('deve lançar EmptyDocumentError para arquivo vazio', async () => {
         const filePath = createTempFile('');
-        await expect(loadText(filePath)).rejects.toThrow('Arquivo de texto vazio');
+        await expect(loadText(filePath)).rejects.toThrow(EmptyDocumentError);
         fs.unlinkSync(filePath);
     });
 
-    it('deve lançar erro para arquivo com apenas espaços em branco', async () => {
+    it('deve lançar EmptyDocumentError para arquivo com apenas espaços em branco', async () => {
         const filePath = createTempFile('   \n\n  \t  ');
-        await expect(loadText(filePath)).rejects.toThrow('Arquivo de texto vazio');
+        await expect(loadText(filePath)).rejects.toThrow(EmptyDocumentError);
         fs.unlinkSync(filePath);
     });
 });

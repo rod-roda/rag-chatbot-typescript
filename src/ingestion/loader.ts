@@ -3,7 +3,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api.js'
-import { EmptyPDFError } from './errors/EmptyPDFError.js';
+import { EmptyDocumentError } from './errors/EmptyDocumentError.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const standardFontDataUrl = path.join(__dirname, '../../node_modules/pdfjs-dist/standard_fonts/');
@@ -31,7 +31,7 @@ export async function loadPDF(filePath: string): Promise<string>
   const cleaned = cleanText(fullText);
 
   if (cleaned.length === 0) {
-    throw new EmptyPDFError();
+    throw new EmptyDocumentError();
   }
 
   return cleaned;
@@ -43,7 +43,7 @@ export async function loadText(filePath: string): Promise<string>
   const cleaned = cleanText(raw);
 
   if (cleaned.length === 0) {
-    throw new Error('Arquivo de texto vazio');
+    throw new EmptyDocumentError('Arquivo de texto vazio');
   }
 
   return cleaned;

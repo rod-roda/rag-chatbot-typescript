@@ -1,12 +1,11 @@
 import crypto from "crypto";
 import { getCollection } from "../database/chroma.js";
 import { chunkText } from "./chunker.js";
-import { loadPDF } from "./loader.js";
+import { loadPDF, loadText } from "./loader.js";
 import { embedTexts } from "../services/embedService.js";
 
-export async function ingestPDF(filePath: string, fileName?: string): Promise<void>
+async function indexChunks(text: string, fileName?: string): Promise<void>
 {
-    const text = await loadPDF(filePath);
     const chunks = chunkText(text);
 
     const collection = await getCollection('documents');
@@ -25,4 +24,16 @@ export async function ingestPDF(filePath: string, fileName?: string): Promise<vo
     });
 
     console.log(`${chunks.length} chunks salvos no chroma`);
+}
+
+export async function ingestPDF(filePath: string, fileName?: string): Promise<void>
+{
+    const text = await loadPDF(filePath);
+    await indexChunks(text, fileName);
+}
+
+export async function ingestText(filePath: string, fileName?: string): Promise<void>
+{
+    const text = await loadText(filePath);
+    await indexChunks(text, fileName);
 }

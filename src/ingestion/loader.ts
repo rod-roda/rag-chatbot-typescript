@@ -37,6 +37,18 @@ export async function loadPDF(filePath: string): Promise<string>
   return cleaned;
 }
 
+export async function loadText(filePath: string): Promise<string>
+{
+  const raw = await fs.promises.readFile(filePath, 'utf-8');
+  const cleaned = cleanText(raw);
+
+  if (cleaned.length === 0) {
+    throw new Error('Arquivo de texto vazio');
+  }
+
+  return cleaned;
+}
+
 function cleanText(text: string): string {
   return text
     .replace(/[\x00-\x09\x0B\x0C\x0E-\x1F\x7F]/g, ' ')

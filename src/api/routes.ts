@@ -12,8 +12,8 @@ const upload = multer({
     limits: { fileSize: 10 * 1024 * 1024 },
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
-        if (ext !== '.pdf'){
-            return cb(new Error('Apenas arquivos PDF são permitidos'));
+        if (ext !== '.pdf' && ext !== '.txt'){
+            return cb(new Error('Apenas arquivos PDF e TXT são permitidos'));
         }
         cb(null, true);
     }

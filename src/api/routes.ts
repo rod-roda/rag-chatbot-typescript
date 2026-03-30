@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import os from 'os';
 import { ingestController } from './controllers/ingestController.js';
+import { queryController } from './controllers/queryController.js';
 
 const router = Router();
 
@@ -19,5 +20,6 @@ const upload = multer({
 });
 
 router.post('/ingest', upload.single('file'), ingestController);
+router.post('/query', queryController);
 
 export default router;

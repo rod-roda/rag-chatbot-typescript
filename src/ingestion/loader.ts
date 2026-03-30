@@ -1,14 +1,19 @@
 import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import * as pdfjsLib from 'pdfjs-dist/legacy/build/pdf.mjs';
 import type { TextItem, TextMarkedContent } from 'pdfjs-dist/types/src/display/api.js'
 import { EmptyPDFError } from './errors/EmptyPDFError.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const standardFontDataUrl = path.join(__dirname, '../../node_modules/pdfjs-dist/standard_fonts/');
 
 export async function loadPDF(filePath: string): Promise<string> 
 {
   const buffer = await fs.promises.readFile(filePath);
   const data = new Uint8Array(buffer);
 
-  const pdf = await pdfjsLib.getDocument({ data }).promise;
+  const pdf = await pdfjsLib.getDocument({ data, standardFontDataUrl }).promise;
 
   let fullText = '';
 

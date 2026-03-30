@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express';
 import fs from 'fs';
 import BadRequest from '../errors/BadRequest.js';
-import { ingestPDF } from '../../ingestion/embedder.js';
+import { ingestPDF } from '../../ingestion/ingest.js';
 
 export async function ingestController(req: Request, res: Response, next: NextFunction): Promise<void>
 {

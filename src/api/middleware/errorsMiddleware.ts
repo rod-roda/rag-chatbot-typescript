@@ -1,7 +1,8 @@
 import DefaultError from "../errors/DefaultError.js";
 import multer from 'multer';
 import { EmptyPDFError } from '../../ingestion/errors/EmptyPDFError.js';
-import { EmbeddingError } from '../../ingestion/errors/EmbeddingError.js';
+import { OpenAIError } from '../../services/errors/OpenAIError.js';
+import { AnthropicError } from '../../services/errors/AnthropicError.js';
 
 import type { Request, Response, NextFunction } from 'express';
 
@@ -11,7 +12,9 @@ function errorsMiddleware(error: unknown, request: Request, response: Response, 
         response.status(400).send({ message: error.message, status: 400 });
     } else if (error instanceof EmptyPDFError) {
         response.status(400).send({ message: error.message, status: 400 });
-    } else if (error instanceof EmbeddingError) {
+    } else if (error instanceof OpenAIError) {
+        response.status(502).send({ message: error.message, status: 502 });
+    } else if (error instanceof AnthropicError) {
         response.status(502).send({ message: error.message, status: 502 });
     } else if (error instanceof DefaultError) {
         error.sendResponse(response);

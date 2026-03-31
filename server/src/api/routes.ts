@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { ingestController } from './controllers/ingestController.js';
 import { queryController } from './controllers/queryController.js';
+import BadRequest from './errors/BadRequest.js';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ const upload = multer({
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
         if (ext !== '.pdf' && ext !== '.txt'){
-            return cb(new Error('Apenas arquivos PDF e TXT são permitidos'));
+            return cb(new BadRequest('Apenas arquivos PDF e TXT são permitidos'));
         }
         cb(null, true);
     }

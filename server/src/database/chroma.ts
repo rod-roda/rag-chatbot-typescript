@@ -6,6 +6,17 @@ const client = new ChromaClient({
     port: Number(process.env.DB_PORT ?? 8000)
 });
 
+export async function checkConnection(): Promise<void>
+{
+    try {
+        await client.heartbeat();
+        console.log('ChromaDB conectado com sucesso');
+    } catch {
+        console.error('Falha ao conectar com o ChromaDB');
+        process.exit(1);
+    }
+}
+
 export async function getCollection(name: string): Promise<Collection>
 {
     return await client.getOrCreateCollection({ name });

@@ -14,16 +14,17 @@ services:
         condition: service_healthy
 
   chromadb:
-    image: chromadb/chroma:0.6.3
+    image: chromadb/chroma:1.0.12
     ports:
       - "8000:8000"
     volumes:
       - chroma_data:/chroma/chroma
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/api/v1/heartbeat"]
+      test: ["CMD-SHELL", "bash -c 'echo > /dev/tcp/localhost/8000'"]
       interval: 5s
       timeout: 3s
       retries: 5
+      start_period: 10s
 
 volumes:
   chroma_data:

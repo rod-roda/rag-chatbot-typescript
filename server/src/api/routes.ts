@@ -4,6 +4,7 @@ import path from 'path';
 import os from 'os';
 import { ingestController } from './controllers/ingestController.js';
 import { queryController } from './controllers/queryController.js';
+import { documentsController } from './controllers/documentsController.js';
 import BadRequest from './errors/BadRequest.js';
 
 const router = Router();
@@ -22,5 +23,6 @@ const upload = multer({
 
 router.post('/ingest', upload.single('file'), ingestController);
 router.post('/query', queryController);
+router.get('/documents', documentsController);
 
 export default router;

@@ -1,7 +1,7 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { queryDocuments, type QueryResponse } from '@/services/api';
+import { useState, useRef, useEffect, useCallback } from 'react';
+import { queryDocuments, listDocuments, type QueryResponse } from '@/services/api';
 
 interface Message {
     id: string;
@@ -10,15 +10,26 @@ interface Message {
     citations?: QueryResponse['citations'];
 }
 
-export default function Chat() {
+export default function Chat({ refreshTrigger }: { refreshTrigger?: number }) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [documents, setDocuments] = useState<string[]>([]);
+    const [selectedDoc, setSelectedDoc] = useState('');
     const bottomRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
+
+    const fetchDocuments = useCallback(async () => {
+        try {
+            const docs = await listDocuments();
+            setDocuments(docs);
+        } catch {}
+    }, []);
+
+    useEffect(() => { fetchDocuments(); }, [fetchDocuments, refreshTrigger]);
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -30,7 +41,7 @@ export default function Chat() {
         setLoading(true);
 
         try {
-            const data = await queryDocuments(question);
+            const data = await queryDocuments(question, selectedDoc || undefined);
             setMessages(prev => [...prev, {
                 id: crypto.randomUUID(),
                 role: 'assistant',
@@ -98,6 +109,20 @@ export default function Chat() {
             </div>
 
             <form onSubmit={handleSubmit} className="p-4 border-t border-gray-800">
+                {documents.length > 0 && (
+                    <div className="mb-2">
+                        <select
+                            value={selectedDoc}
+                            onChange={e => setSelectedDoc(e.target.value)}
+                            className="w-full rounded-lg bg-gray-800 border border-gray-700 px-3 py-1.5 text-sm text-gray-300 focus:outline-none focus:border-blue-500"
+                        >
+                            <option value="">Todos os documentos</option>
+                            {documents.map(doc => (
+                                <option key={doc} value={doc}>{doc}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
                 <div className="flex gap-2">
                     <input
                         type="text"

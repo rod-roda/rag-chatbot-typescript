@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react';
 import { uploadDocument } from '@/services/api';
 
-export default function FileUpload() {
+export default function FileUpload({ onUploadSuccess }: { onUploadSuccess?: () => void }) {
     const [status, setStatus] = useState<'idle' | 'uploading' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
     const inputRef = useRef<HTMLInputElement>(null);
@@ -19,6 +19,7 @@ export default function FileUpload() {
             const data = await uploadDocument(file);
             setStatus('success');
             setMessage(`${file.name} - ${data.message}`);
+            onUploadSuccess?.();
         } catch (err) {
             setStatus('error');
             setMessage(err instanceof Error ? err.message : 'Erro desconhecido');

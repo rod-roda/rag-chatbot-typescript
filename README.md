@@ -185,3 +185,14 @@ npm test
 - **ChromaDB:** Railway (Docker Image: `chromadb/chroma:latest`)
 
 Environment variables are configured per-platform — no secrets in the repository.
+
+
+## Additional Notes
+
+### API endpoint for listing indexed documents
+
+Although the challenge only requires an API, this project includes a frontend for demonstration purposes. To support the UI (and future integrations), the backend exposes a `GET /api/documents` endpoint that lists all unique file names currently indexed in ChromaDB. This endpoint is optional and does not affect the core API functionality. It is a common practice in real-world APIs to provide such endpoints for better integration and user experience.
+
+### What happens if a non-existent fileName is queried?
+
+If the user queries the API with a `fileName` that does not exist in the database, the system simply returns an empty result (no chunks/snippets found). This does not cause errors or break the API; the LLM will respond that no relevant information was found. This behavior is intentional and robust, ensuring the API remains stable regardless of user input.

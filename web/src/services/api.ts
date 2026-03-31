@@ -34,12 +34,12 @@ export interface QueryResponse {
     };
 }
 
-export async function queryDocuments(question: string): Promise<QueryResponse>
+export async function queryDocuments(question: string, fileName?: string): Promise<QueryResponse>
 {
     const response = await fetch(`${API_URL}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ question }),
+        body: JSON.stringify({ question, ...(fileName && { fileName }) }),
     });
 
     const data = await response.json();
@@ -49,4 +49,16 @@ export async function queryDocuments(question: string): Promise<QueryResponse>
     }
 
     return data;
+}
+
+export async function listDocuments(): Promise<string[]>
+{
+    const response = await fetch(`${API_URL}/documents`);
+    const data = await response.json();
+
+    if (!response.ok) {
+        throw new Error(data.message ?? 'Erro ao listar documentos');
+    }
+
+    return data.documents;
 }

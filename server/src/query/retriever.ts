@@ -9,14 +9,15 @@ export interface RetrievedChunk
     distance: number
 }
 
-export async function retrieveChunks(query: string, k: number = 3, maxDistance: number = 1.5): Promise<RetrievedChunk[]> 
+export async function retrieveChunks(query: string, k: number = 3, maxDistance: number = 1.5, fileName?: string): Promise<RetrievedChunk[]> 
 {
     const collection = await getCollection('documents');
     const embedding = await embedQuery(query);
 
     const results = await collection.query({
         queryEmbeddings: [embedding],
-        nResults: k
+        nResults: k,
+        ...(fileName && { where: { fileName } })
     });
 
     const ids = results.ids[0] ?? [];

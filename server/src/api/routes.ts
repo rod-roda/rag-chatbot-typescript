@@ -15,7 +15,7 @@ const upload = multer({
     fileFilter: (req, file, cb) => {
         const ext = path.extname(file.originalname).toLowerCase();
         if (ext !== '.pdf' && ext !== '.txt'){
-            return cb(new BadRequest('Apenas arquivos PDF e TXT são permitidos'));
+            return cb(new BadRequest('Only PDF and TXT files are allowed'));
         }
         cb(null, true);
     }

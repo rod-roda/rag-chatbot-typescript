@@ -12,36 +12,36 @@ function createTempFile(content: string): string {
 }
 
 describe('loadText', () => {
-    it('deve carregar e retornar o conteúdo de um arquivo de texto', async () => {
-        const filePath = createTempFile('Este é um texto de exemplo para teste.');
+    it('should load and return the content of a text file', async () => {
+        const filePath = createTempFile('This is a sample text for testing.');
         const result = await loadText(filePath);
-        expect(result).toBe('Este é um texto de exemplo para teste.');
+        expect(result).toBe('This is a sample text for testing.');
         fs.unlinkSync(filePath);
     });
 
-    it('deve limpar caracteres de controle do texto', async () => {
-        const filePath = createTempFile('Texto\x00 com\x07 caracteres\x1F estranhos');
+    it('should clean control characters from the text', async () => {
+        const filePath = createTempFile('Text\x00 with\x07 strange\x1F characters');
         const result = await loadText(filePath);
         expect(result).not.toMatch(/[\x00-\x09\x0B\x0C\x0E-\x1F\x7F]/);
-        expect(result).toContain('Texto');
-        expect(result).toContain('caracteres');
+        expect(result).toContain('Text');
+        expect(result).toContain('characters');
         fs.unlinkSync(filePath);
     });
 
-    it('deve normalizar múltiplos espaços em um só', async () => {
-        const filePath = createTempFile('Texto    com     muitos    espaços');
+    it('should normalize multiple spaces into one', async () => {
+        const filePath = createTempFile('Text    with     many    spaces');
         const result = await loadText(filePath);
-        expect(result).toBe('Texto com muitos espaços');
+        expect(result).toBe('Text with many spaces');
         fs.unlinkSync(filePath);
     });
 
-    it('deve lançar EmptyDocumentError para arquivo vazio', async () => {
+    it('should throw EmptyDocumentError for empty file', async () => {
         const filePath = createTempFile('');
         await expect(loadText(filePath)).rejects.toThrow(EmptyDocumentError);
         fs.unlinkSync(filePath);
     });
 
-    it('deve lançar EmptyDocumentError para arquivo com apenas espaços em branco', async () => {
+    it('should throw EmptyDocumentError for file with only whitespace', async () => {
         const filePath = createTempFile('   \n\n  \t  ');
         await expect(loadText(filePath)).rejects.toThrow(EmptyDocumentError);
         fs.unlinkSync(filePath);

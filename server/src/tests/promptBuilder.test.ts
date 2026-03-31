@@ -3,44 +3,44 @@ import { buildPrompt } from '../query/promptBuilder.js';
 import type { RetrievedChunk } from '../query/retriever.js';
 
 const mockChunks: RetrievedChunk[] = [
-    { content: 'O gato sentou no tapete.', source: 'abc123', chunkIndex: 0, distance: 0.3 },
-    { content: 'O cachorro correu no parque.', source: 'abc123', chunkIndex: 1, distance: 0.5 },
+    { content: 'The cat sat on the mat.', source: 'abc123', chunkIndex: 0, distance: 0.3 },
+    { content: 'The dog ran in the park.', source: 'abc123', chunkIndex: 1, distance: 0.5 },
 ];
 
 describe('buildPrompt', () => {
-    it('deve retornar system e user como strings', () => {
-        const prompt = buildPrompt('Onde o gato sentou?', mockChunks);
+    it('should return system and user as strings', () => {
+        const prompt = buildPrompt('Where did the cat sit?', mockChunks);
         expect(prompt).toHaveProperty('system');
         expect(prompt).toHaveProperty('user');
         expect(typeof prompt.system).toBe('string');
         expect(typeof prompt.user).toBe('string');
     });
 
-    it('deve incluir a pergunta no prompt do usuário', () => {
-        const question = 'Onde o gato sentou?';
+    it('should include the question in the user prompt', () => {
+        const question = 'Where did the cat sit?';
         const prompt = buildPrompt(question, mockChunks);
         expect(prompt.user).toContain(question);
     });
 
-    it('deve incluir o conteúdo dos chunks no prompt do usuário', () => {
-        const prompt = buildPrompt('Pergunta qualquer', mockChunks);
-        expect(prompt.user).toContain('O gato sentou no tapete.');
-        expect(prompt.user).toContain('O cachorro correu no parque.');
+    it('should include the content of the chunks in the user prompt', () => {
+        const prompt = buildPrompt('Any question', mockChunks);
+        expect(prompt.user).toContain('The cat sat on the mat.');
+        expect(prompt.user).toContain('The dog ran in the park.');
     });
 
-    it('deve numerar os trechos corretamente', () => {
-        const prompt = buildPrompt('Pergunta', mockChunks);
-        expect(prompt.user).toContain('[Trecho 1');
-        expect(prompt.user).toContain('[Trecho 2');
+    it('should number the excerpts correctly', () => {
+        const prompt = buildPrompt('Question', mockChunks);
+        expect(prompt.user).toContain('[Excerpt 1');
+        expect(prompt.user).toContain('[Excerpt 2');
     });
 
-    it('deve incluir a fonte de cada chunk', () => {
-        const prompt = buildPrompt('Pergunta', mockChunks);
-        expect(prompt.user).toContain('Fonte:abc123');
+    it('should include the source of each chunk', () => {
+        const prompt = buildPrompt('Question', mockChunks);
+        expect(prompt.user).toContain('Source:abc123');
     });
 
-    it('deve instruir o modelo a citar trechos no system prompt', () => {
-        const prompt = buildPrompt('Pergunta', mockChunks);
-        expect(prompt.system).toContain('[Trecho N]');
+    it('should instruct the model to cite excerpts in the system prompt', () => {
+        const prompt = buildPrompt('Question', mockChunks);
+        expect(prompt.system).toContain('[Excerpt N]');
     });
 });

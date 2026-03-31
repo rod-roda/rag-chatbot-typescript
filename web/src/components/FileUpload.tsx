@@ -22,19 +22,20 @@ export default function FileUpload({ onUploadSuccess }: { onUploadSuccess?: () =
             onUploadSuccess?.();
         } catch (err) {
             setStatus('error');
-            setMessage(err instanceof Error ? err.message : 'Erro desconhecido');
+            setMessage(err instanceof Error ? err.message : 'Unknown error');
         } finally {
             if (inputRef.current) inputRef.current.value = '';
         }
     }
 
     return (
+
         <div className="rounded-lg border border-gray-800 bg-gray-900 p-4">
-            <h2 className="text-sm font-semibold text-gray-400 mb-3">Upload de Documento</h2>
+            <h2 className="text-sm font-semibold text-gray-400 mb-3">Document Upload</h2>
 
             <label className="flex items-center justify-center gap-2 cursor-pointer rounded-lg border-2 border-dashed border-gray-700 hover:border-gray-500 p-6 transition-colors">
                 <span className="text-sm text-gray-400">
-                    {status === 'uploading' ? 'Enviando...' : 'Clique para enviar PDF ou TXT'}
+                    {status === 'uploading' ? 'Uploading...' : 'Click to upload PDF or TXT'}
                 </span>
                 <input
                     ref={inputRef}

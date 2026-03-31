@@ -9,21 +9,21 @@ export interface BuiltPrompt
 export function buildPrompt(question: string, chunks: RetrievedChunk[]): BuiltPrompt
 {
     const context = chunks
-        .map((chunk, i) => `[Trecho ${i+1} - Fonte:${chunk.source}\n${chunk.content}]`)
+        .map((chunk, i) => `[Excerpt ${i+1} - Source:${chunk.source}\n${chunk.content}]`)
         .join('\n\n');
     
-    const system = `Você é um assistente especializado em responder perguntas com base em documentos fornecidos.
+    const system = `You are an assistant specialized in answering questions based on provided documents.
 
-Regras:
-- Responda APENAS com base nos trechos fornecidos
-- Cite qual trecho embasou sua resposta usando [Trecho N]
-- Se a resposta não estiver nos trechos, diga claramente que não encontrou a informação
-- Seja objetivo e claro`;
+Rules:
+- Answer ONLY based on the provided excerpts
+- Cite which excerpt supported your answer using [Excerpt N]
+- If the answer is not in the excerpts, clearly state that you did not find the information
+- Be objective and clear`;
 
-    const user = `Trechos do documento:
+    const user = `Document excerpts:
 ${context}
 
-Pergunta: ${question};`
+Question: ${question};`
 
     return { system, user };
 }

@@ -11,13 +11,13 @@ export async function queryController(req: Request, res: Response, next: NextFun
         const { question, fileName } = req.body;
 
         if(!question || question.trim().length < 10){
-            next(new BadRequest('Pergunta muito curta ou não informada'));
+            next(new BadRequest('Question too short or not provided'));
             return;
         }
 
         const chunks = await retrieveChunks(question, 3, 1.5, fileName);
         if(chunks.length === 0){
-            next(new NotFound('Nenhuma informação relevante encontrada no documento'));
+            next(new NotFound('No relevant information found in the document'));
             return;
         }
 

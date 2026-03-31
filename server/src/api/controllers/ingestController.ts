@@ -23,7 +23,7 @@ export async function ingestController(req: Request, res: Response, next: NextFu
         fs.unlinkSync(req.file.path);
         
         res.status(200).json({ 
-           message: 'Documento processado e vetores salvos com sucesso'
+           message: 'Document processed and vectors saved successfully.'
         });
     } catch (error) {
         if (req.file) {

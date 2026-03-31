@@ -106,7 +106,7 @@ curl -F "file=@document.pdf" http://localhost:3000/api/ingest
 
 **Response:**
 ```json
-{ "message": "Documento processado e vetores salvos com sucesso" }
+{ "message": "Document processed and vectors saved successfully." }
 ```
 
 ### `POST /api/query`

@@ -35,7 +35,7 @@ User ──► Express API ──► Multer (file upload)
 │   ├── src/
 │   │   ├── index.ts         # Express app entry point
 │   │   ├── api/
-│   │   │   ├── routes.ts    # POST /ingest, POST /query
+│   │   │   ├── routes.ts    # POST /ingest, POST /query, GET /documents
 │   │   │   ├── controllers/ # Request handling logic
 │   │   │   ├── errors/      # Custom error hierarchy
 │   │   │   └── middleware/   # Centralized error handler
@@ -122,7 +122,7 @@ curl -X POST http://localhost:3000/api/query \
 **Response:**
 ```json
 {
-  "answer": "According to the document [Trecho 1], ...",
+  "answer": "According to the document [Excerpt 1], ...",
   "citations": [
     { "content": "...", "source": "abc123", "chunkIndex": 0 }
   ],
@@ -166,6 +166,20 @@ Every error flows through a single middleware. External API failures map to 502 
 
 30 requests/minute per IP. Since the API calls paid external services (OpenAI, Anthropic), uncontrolled access could generate significant costs. Even for a demo, this is a deliberate security choice.
 
+### Why delete before re-upload?
+
+When a user uploads a file with the same name, the system deletes all existing chunks for that `fileName` before indexing the new content. This is necessary because chunk IDs are derived from a content hash — uploading a different version of the same file would generate new IDs, leaving orphan chunks from the previous version in the database.
+
+### Security considerations
+
+- **Rate limiting** protects against abuse and cost overruns
+- **`trust proxy`** is enabled for correct IP resolution behind reverse proxies (Railway, Vercel)
+- **Content-Type validation** on POST endpoints prevents malformed requests
+- **Input sanitization** on `fileName` query parameter strips special characters
+- **File type/size validation** via Multer (PDF/TXT only, 10MB max)
+- **CORS origin** configurable via environment variable
+- **Temporary file cleanup** guaranteed in both success and error paths
+
 ## Testing
 
 ```bash
@@ -173,7 +187,7 @@ cd server
 npm test
 ```
 
-17 tests across 3 files covering the core logic:
+Tests covering the core pure logic:
 - **chunker.test.ts** — chunk size, overlap, filtering, edge cases
 - **loader.test.ts** — text loading, cleaning, empty file handling
 - **promptBuilder.test.ts** — prompt structure, chunk formatting, citation instructions
@@ -196,3 +210,7 @@ Although the challenge only requires an API, this project includes a frontend fo
 ### What happens if a non-existent fileName is queried?
 
 If the user queries the API with a `fileName` that does not exist in the database, the system simply returns an empty result (no chunks/snippets found). This does not cause errors or break the API; the LLM will respond that no relevant information was found. This behavior is intentional and robust, ensuring the API remains stable regardless of user input.
+
+### What happens when the same file is uploaded again?
+
+The system detects re-uploads by `fileName` and removes all previously indexed chunks for that file before processing the new version. This ensures the database always reflects the latest content without duplicates or orphan data.

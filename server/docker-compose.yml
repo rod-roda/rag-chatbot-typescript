@@ -7,11 +7,13 @@ services:
       - PORT=3000
       - DB_HOST=chromadb
       - DB_PORT=8000
+      - CORS_ORIGIN=${CORS_ORIGIN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
     depends_on:
       chromadb:
         condition: service_healthy
+    restart: unless-stopped
 
   chromadb:
     image: chromadb/chroma:1.0.12
@@ -25,6 +27,7 @@ services:
       timeout: 3s
       retries: 5
       start_period: 10s
+    restart: unless-stopped
 
 volumes:
   chroma_data:

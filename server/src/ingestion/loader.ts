@@ -43,7 +43,7 @@ export async function loadText(filePath: string): Promise<string>
   const cleaned = cleanText(raw);
 
   if (cleaned.length === 0) {
-    throw new EmptyDocumentError('Arquivo de texto vazio');
+    throw new EmptyDocumentError('Text file is empty');
   }
 
   return cleaned;

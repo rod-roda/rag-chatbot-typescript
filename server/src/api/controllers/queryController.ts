@@ -8,6 +8,16 @@ import NotFound from "../errors/NotFound.js";
 export async function queryController(req: Request, res: Response, next: NextFunction): Promise<void>
 {
     try {
+        if (!req.is('application/json')) {
+            next(new BadRequest('Content-Type must be application/json'));
+            return;
+        }
+
+        if (!req.body) {
+            next(new BadRequest('Request body is required'));
+            return;
+        }
+
         const { question, fileName } = req.body;
 
         if(!question || question.trim().length < 10){

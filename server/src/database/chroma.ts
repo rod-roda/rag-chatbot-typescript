@@ -1,5 +1,6 @@
 import { ChromaClient } from "chromadb";
 import type { Collection } from "chromadb";
+import DatabaseError from "./errors/DatabaseError.js";
 
 const client = new ChromaClient({
     host: process.env.DB_HOST ?? 'localhost',
@@ -10,14 +11,19 @@ export async function checkConnection(): Promise<void>
 {
     try {
         await client.heartbeat();
-        console.log('ChromaDB conectado com sucesso');
+        console.log('ChromaDB connected successfully');
     } catch {
-        console.error('Falha ao conectar com o ChromaDB');
+        console.error('Failed to connect to ChromaDB');
         process.exit(1);
     }
 }
 
 export async function getCollection(name: string): Promise<Collection>
 {
-    return await client.getOrCreateCollection({ name });
+    try {
+        return await client.getOrCreateCollection({ name });
+    } catch (error) {
+        console.error('ChromaDB error:', error);
+        throw new DatabaseError('Failed to access database collection', 503, { cause: error });
+    }
 }

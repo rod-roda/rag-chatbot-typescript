@@ -11,13 +11,14 @@ export async function ingestController(req: Request, res: Response, next: NextFu
             next(new BadRequest('File not found'));
             return;
         }
-        
-        const ext = path.extname(req.file.originalname).toLowerCase();
+
+        const originalName = Buffer.from(req.file.originalname, 'latin1').toString('utf8');
+        const ext = path.extname(originalName).toLowerCase();
 
         if (ext === '.pdf') {
-            await ingestPDF(req.file.path, req.file.originalname);
+            await ingestPDF(req.file.path, originalName);
         } else {
-            await ingestText(req.file.path, req.file.originalname);
+            await ingestText(req.file.path, originalName);
         }
 
         fs.unlinkSync(req.file.path);

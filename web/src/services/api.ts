@@ -1,7 +1,14 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
-export async function uploadDocument(file: File): Promise<{ message: string }>
-{
+async function parseJsonResponse(response: Response, fallbackError: string) {
+    try {
+        return await response.json();
+    } catch {
+        throw new Error(response.ok ? fallbackError : `Server error (${response.status})`);
+    }
+}
+
+export async function uploadDocument(file: File): Promise<{ message: string }> {
     const formData = new FormData();
     formData.append('file', file);
 
@@ -10,10 +17,10 @@ export async function uploadDocument(file: File): Promise<{ message: string }>
         body: formData,
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response, 'Failed to upload document');
 
     if (!response.ok) {
-        throw new Error(data.message ?? 'Erro ao enviar documento');
+        throw new Error(data.message ?? 'Failed to upload document');
     }
 
     return data;
@@ -34,30 +41,28 @@ export interface QueryResponse {
     };
 }
 
-export async function queryDocuments(question: string, fileName?: string): Promise<QueryResponse>
-{
+export async function queryDocuments(question: string, fileName?: string): Promise<QueryResponse> {
     const response = await fetch(`${API_URL}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, ...(fileName && { fileName }) }),
     });
 
-    const data = await response.json();
+    const data = await parseJsonResponse(response, 'Failed to query documents');
 
     if (!response.ok) {
-        throw new Error(data.message ?? data.error ?? 'Erro ao consultar');
+        throw new Error(data.message ?? data.error ?? 'Failed to query documents');
     }
 
     return data;
 }
 
-export async function listDocuments(): Promise<string[]>
-{
+export async function listDocuments(): Promise<string[]> {
     const response = await fetch(`${API_URL}/documents`);
-    const data = await response.json();
+    const data = await parseJsonResponse(response, 'Failed to list documents');
 
     if (!response.ok) {
-        throw new Error(data.message ?? 'Erro ao listar documentos');
+        throw new Error(data.message ?? 'Failed to list documents');
     }
 
     return data.documents;

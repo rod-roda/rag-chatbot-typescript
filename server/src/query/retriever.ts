@@ -1,5 +1,6 @@
 import { getCollection } from "../database/chroma.js";
 import { embedQuery } from "../services/embedService.js";
+import DatabaseError from "../database/errors/DatabaseError.js";
 
 export interface RetrievedChunk
 {
@@ -9,16 +10,27 @@ export interface RetrievedChunk
     distance: number
 }
 
+function sanitizeFileName(fileName: string): string {
+    return fileName.replace(/[^a-zA-Z0-9._\-\s()\[\]]/g, '').trim();
+}
+
 export async function retrieveChunks(query: string, k: number = 3, maxDistance: number = 1.5, fileName?: string): Promise<RetrievedChunk[]> 
 {
     const collection = await getCollection('documents');
     const embedding = await embedQuery(query);
+    const sanitizedFileName = fileName ? sanitizeFileName(fileName) : undefined;
 
-    const results = await collection.query({
-        queryEmbeddings: [embedding],
-        nResults: k,
-        ...(fileName && { where: { fileName } })
-    });
+    let results;
+    try {
+        results = await collection.query({
+            queryEmbeddings: [embedding],
+            nResults: k,
+            ...(sanitizedFileName && { where: { fileName: sanitizedFileName } })
+        });
+    } catch (error) {
+        console.error('ChromaDB query error:', error);
+        throw new DatabaseError('Failed to retrieve relevant chunks from database', 500, { cause: error });
+    }
 
     const ids = results.ids[0] ?? [];
     const documents = results.documents[0] ?? [];

@@ -17,7 +17,7 @@ export async function embedTexts(texts: string[]): Promise<number[][]>
         }
     } catch (error) {
         console.error('OpenAI API error:', error);
-        throw new OpenAIError('Falha ao gerar embeddings');
+        throw new OpenAIError('Failed to generate embeddings');
     }
 
     return allEmbeddings;
@@ -26,6 +26,6 @@ export async function embedTexts(texts: string[]): Promise<number[][]>
 export async function embedQuery(query: string): Promise<number[]>
 {
     const [embedding] = await embedTexts([query]);
-    if (!embedding) throw new OpenAIError('Falha ao gerar embeddings');
+    if (!embedding) throw new OpenAIError('Failed to generate embeddings');
     return embedding;
 }

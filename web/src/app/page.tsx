@@ -33,7 +33,10 @@ export default function Home() {
                 documents={documents}
                 selectedContext={selectedContext}
                 onSelectContext={(doc) => { setSelectedContext(doc); setSidebarOpen(false); }}
-                onUploadSuccess={() => setRefreshTrigger(prev => prev + 1)}
+                onUploadSuccess={(fileName) => {
+                    setSelectedContext(fileName);
+                    setRefreshTrigger(prev => prev + 1);
+                }}
                 open={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
             />

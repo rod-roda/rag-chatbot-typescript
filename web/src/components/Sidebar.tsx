@@ -7,7 +7,7 @@ interface SidebarProps {
     documents: string[];
     selectedContext: string;
     onSelectContext: (doc: string) => void;
-    onUploadSuccess: () => void;
+    onUploadSuccess: (fileName: string) => void;
     open: boolean;
     onClose: () => void;
 }
@@ -34,7 +34,7 @@ export default function Sidebar({
         try {
             await uploadDocument(file);
             setUploadStatus({ type: 'success', message: `${file.name} uploaded` });
-            onUploadSuccess();
+            onUploadSuccess(file.name);
         } catch (err) {
             setUploadStatus({ type: 'error', message: err instanceof Error ? err.message : 'Upload failed' });
         }

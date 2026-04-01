@@ -23,6 +23,11 @@ app.use(rateLimit({
 }));
 
 app.use(express.json());
+
+app.get('/health', (req: Request, res: Response) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.use('/api', router);
 
 app.use((req: Request, res: Response, next: NextFunction): void => {

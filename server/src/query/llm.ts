@@ -33,6 +33,6 @@ export async function askClaude(prompt: BuiltPrompt): Promise<LLMResponse>
         }
     } catch (error) {
         console.error('Anthropic API error:', error);
-        throw new AnthropicError();
+        throw new AnthropicError('Failed to query the Anthropic API', { cause: error });
     }
 }

@@ -170,12 +170,15 @@ Every error flows through a single middleware. External API failures map to 502 
 
 When a user uploads a file with the same name, the system deletes all existing chunks for that `fileName` before indexing the new content. This is necessary because chunk IDs are derived from a content hash — uploading a different version of the same file would generate new IDs, leaving orphan chunks from the previous version in the database.
 
+### Why `tsx` instead of compiling to JavaScript?
+
+For this project scope, `tsx` simplifies the development and deployment workflow by running TypeScript directly. In a production environment with stricter performance requirements, a build step compiling to JavaScript (`tsc` + `node dist/index.js`) would be preferred to eliminate the runtime transpilation overhead.
+
 ### Security considerations
 
 - **Rate limiting** protects against abuse and cost overruns
 - **`trust proxy`** is enabled for correct IP resolution behind reverse proxies (Railway, Vercel)
 - **Content-Type validation** on POST endpoints prevents malformed requests
-- **Input sanitization** on `fileName` query parameter strips special characters
 - **File type/size validation** via Multer (PDF/TXT only, 10MB max)
 - **CORS origin** configurable via environment variable
 - **Temporary file cleanup** guaranteed in both success and error paths

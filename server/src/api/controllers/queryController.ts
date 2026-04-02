@@ -20,7 +20,7 @@ export async function queryController(req: Request, res: Response, next: NextFun
 
         const { question, fileName } = req.body;
 
-        if(!question || question.trim().length < 10){
+        if(!question || question.trim().length < 5){
             next(new BadRequest('Question too short or not provided'));
             return;
         }

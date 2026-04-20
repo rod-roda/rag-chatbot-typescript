@@ -20,10 +20,9 @@ export async function retrieveChunks(query: string, userId: string, k: number = 
         results = await collection.query({
             queryEmbeddings: [embedding],
             nResults: k,
-            where: {
-                userId,
-                ...(fileName && { fileName })
-            }
+            where: fileName
+                ? { $and: [{ userId }, { fileName }] }
+                : { userId }
         });
     } catch (error) {
         console.error('ChromaDB query error:', error);

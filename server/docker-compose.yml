@@ -10,6 +10,9 @@ services:
       - CORS_ORIGIN=${CORS_ORIGIN:-}
       - OPENAI_API_KEY=${OPENAI_API_KEY}
       - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_EXPIRES_IN=${JWT_EXPIRES_IN:-7d}
+      - DATABASE_URL=file:./prisma/dev.db
     depends_on:
       chromadb:
         condition: service_healthy

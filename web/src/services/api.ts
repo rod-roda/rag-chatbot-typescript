@@ -1,5 +1,22 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:3000/api';
 
+export function getToken(): string | null {
+    return localStorage.getItem('token');
+}
+
+export function saveToken(token: string): void {
+    localStorage.setItem('token', token);
+}
+
+export function removeToken(): void {
+    localStorage.removeItem('token');
+}
+
+function authHeaders(): Record<string, string> {
+    const token = getToken();
+    return token ? { Authorization: `Bearer ${token}` } : {};
+}
+
 async function parseJsonResponse(response: Response, fallbackError: string) {
     try {
         return await response.json();
@@ -8,15 +25,59 @@ async function parseJsonResponse(response: Response, fallbackError: string) {
     }
 }
 
+function checkUnauthorized(response: Response): void {
+    if (response.status === 401) {
+        removeToken();
+        window.dispatchEvent(new Event('auth:logout'));
+        throw new Error('Session expired. Please log in again.');
+    }
+}
+
+export async function registerUser(email: string, password: string): Promise<string> {
+    const response = await fetch(`${API_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+    });
+
+    const data = await parseJsonResponse(response, 'Failed to register');
+
+    if (!response.ok) {
+        throw new Error(data.message ?? 'Failed to register');
+    }
+
+    saveToken(data.token);
+    return data.token;
+}
+
+export async function loginUser(email: string, password: string): Promise<string> {
+    const response = await fetch(`${API_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+    });
+
+    const data = await parseJsonResponse(response, 'Failed to login');
+
+    if (!response.ok) {
+        throw new Error(data.message ?? 'Failed to login');
+    }
+
+    saveToken(data.token);
+    return data.token;
+}
+
 export async function uploadDocument(file: File): Promise<{ message: string }> {
     const formData = new FormData();
     formData.append('file', file);
 
     const response = await fetch(`${API_URL}/ingest`, {
         method: 'POST',
+        headers: { ...authHeaders() },
         body: formData,
     });
 
+    checkUnauthorized(response);
     const data = await parseJsonResponse(response, 'Failed to upload document');
 
     if (!response.ok) {
@@ -44,10 +105,11 @@ export interface QueryResponse {
 export async function queryDocuments(question: string, fileName?: string): Promise<QueryResponse> {
     const response = await fetch(`${API_URL}/query`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
         body: JSON.stringify({ question, ...(fileName && { fileName }) }),
     });
 
+    checkUnauthorized(response);
     const data = await parseJsonResponse(response, 'Failed to query documents');
 
     if (!response.ok) {
@@ -58,7 +120,11 @@ export async function queryDocuments(question: string, fileName?: string): Promi
 }
 
 export async function listDocuments(): Promise<string[]> {
-    const response = await fetch(`${API_URL}/documents`);
+    const response = await fetch(`${API_URL}/documents`, {
+        headers: { ...authHeaders() },
+    });
+
+    checkUnauthorized(response);
     const data = await parseJsonResponse(response, 'Failed to list documents');
 
     if (!response.ok) {

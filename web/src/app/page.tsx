@@ -1,11 +1,13 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Chat from '@/components/Chat';
-import { listDocuments } from '@/services/api';
+import AuthForm from '@/components/AuthForm';
+import { listDocuments, getToken, removeToken } from '@/services/api';
 
 export default function Home() {
+    const [authenticated, setAuthenticated] = useState(false);
     const [documents, setDocuments] = useState<string[]>([]);
     const [selectedContext, setSelectedContext] = useState('');
     const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -13,12 +15,36 @@ export default function Home() {
     const [loadError, setLoadError] = useState(false);
 
     useEffect(() => {
+        setAuthenticated(!!getToken());
+    }, []);
+
+    const handleLogout = useCallback(() => {
+        removeToken();
+        setAuthenticated(false);
+        setDocuments([]);
+        setSelectedContext('');
+    }, []);
+
+    useEffect(() => {
+        function onForceLogout() {
+            handleLogout();
+        }
+        window.addEventListener('auth:logout', onForceLogout);
+        return () => window.removeEventListener('auth:logout', onForceLogout);
+    }, [handleLogout]);
+
+    useEffect(() => {
+        if (!authenticated) return;
         let cancelled = false;
         listDocuments()
             .then(docs => { if (!cancelled) { setDocuments(docs); setLoadError(false); } })
             .catch(() => { if (!cancelled) setLoadError(true); });
         return () => { cancelled = true; };
-    }, [refreshTrigger]);
+    }, [refreshTrigger, authenticated]);
+
+    if (!authenticated) {
+        return <AuthForm onAuth={() => setAuthenticated(true)} />;
+    }
 
     return (
         <div className="flex h-screen relative">
@@ -39,6 +65,7 @@ export default function Home() {
                 }}
                 open={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
+                onLogout={handleLogout}
             />
             <Chat
                 documents={documents}

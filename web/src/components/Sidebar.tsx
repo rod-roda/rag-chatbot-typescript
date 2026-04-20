@@ -10,6 +10,7 @@ interface SidebarProps {
     onUploadSuccess: (fileName: string) => void;
     open: boolean;
     onClose: () => void;
+    onLogout: () => void;
 }
 
 export default function Sidebar({
@@ -19,6 +20,7 @@ export default function Sidebar({
     onUploadSuccess,
     open,
     onClose,
+    onLogout,
 }: SidebarProps) {
     const [uploading, setUploading] = useState(false);
     const [uploadStatus, setUploadStatus] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
@@ -164,6 +166,20 @@ export default function Sidebar({
                         </button>
                     ))}
                 </div>
+            </div>
+
+            {/* Logout */}
+            <div className="px-3 py-3 mt-2 border-t border-gray-200">
+                <button
+                    onClick={onLogout}
+                    className="w-full flex items-center justify-center gap-1.5 text-[12px] text-gray-500 hover:text-red-500
+                        py-2 px-3 rounded-lg cursor-pointer transition-colors hover:bg-red-50"
+                >
+                    <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true">
+                        <path d="M17 7l-1.41 1.41L18.17 11H8v2h10.17l-2.58 2.58L17 17l5-5zM4 5h8V3H4c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h8v-2H4V5z"/>
+                    </svg>
+                    Sign out
+                </button>
             </div>
         </div>
     );

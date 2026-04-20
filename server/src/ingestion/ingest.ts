@@ -10,7 +10,7 @@ async function removeExistingChunks(fileName: string, userId: string): Promise<v
     const collection = await getCollection('documents');
 
     try {
-        const existing = await collection.get({ where: { fileName, userId }, include: [] });
+        const existing = await collection.get({ where: { $and: [{ fileName }, { userId }] }, include: [] });
         if (existing.ids.length > 0) {
             await collection.delete({ ids: existing.ids });
             console.log(`Removed ${existing.ids.length} existing chunks for "${fileName}"`);

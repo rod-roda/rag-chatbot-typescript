@@ -5,12 +5,12 @@ import { loadPDF, loadText } from "./loader.js";
 import { embedTexts } from "../services/embedService.js";
 import DatabaseError from "../database/errors/DatabaseError.js";
 
-async function removeExistingChunks(fileName: string): Promise<void>
+async function removeExistingChunks(fileName: string, userId: string): Promise<void>
 {
     const collection = await getCollection('documents');
 
     try {
-        const existing = await collection.get({ where: { fileName }, include: [] });
+        const existing = await collection.get({ where: { fileName, userId }, include: [] });
         if (existing.ids.length > 0) {
             await collection.delete({ ids: existing.ids });
             console.log(`Removed ${existing.ids.length} existing chunks for "${fileName}"`);
@@ -21,7 +21,7 @@ async function removeExistingChunks(fileName: string): Promise<void>
     }
 }
 
-async function indexChunks(text: string, fileName?: string): Promise<void>
+async function indexChunks(text: string, userId: string, fileName?: string): Promise<void>
 {
     const chunks = chunkText(text);
     const collection = await getCollection('documents');
@@ -29,7 +29,7 @@ async function indexChunks(text: string, fileName?: string): Promise<void>
     const embeddings = await embedTexts(chunks);
 
     if (fileName) {
-        await removeExistingChunks(fileName);
+        await removeExistingChunks(fileName, userId);
     }
 
     try {
@@ -40,7 +40,8 @@ async function indexChunks(text: string, fileName?: string): Promise<void>
             metadatas: chunks.map((_, i) => ({
                 source: hash,
                 fileName: fileName ?? 'unknown',
-                chunkIndex: i
+                chunkIndex: i,
+                userId
             }))
         });
     } catch (error) {
@@ -51,14 +52,14 @@ async function indexChunks(text: string, fileName?: string): Promise<void>
     console.log(`${chunks.length} chunks saved to ChromaDB`);
 }
 
-export async function ingestPDF(filePath: string, fileName?: string): Promise<void>
+export async function ingestPDF(filePath: string, userId: string, fileName?: string): Promise<void>
 {
     const text = await loadPDF(filePath);
-    await indexChunks(text, fileName);
+    await indexChunks(text, userId, fileName);
 }
 
-export async function ingestText(filePath: string, fileName?: string): Promise<void>
+export async function ingestText(filePath: string, userId: string, fileName?: string): Promise<void>
 {
     const text = await loadText(filePath);
-    await indexChunks(text, fileName);
+    await indexChunks(text,userId, fileName);
 }

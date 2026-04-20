@@ -6,6 +6,8 @@ import { ingestController } from './controllers/ingestController.js';
 import { queryController } from './controllers/queryController.js';
 import { documentsController } from './controllers/documentsController.js';
 import BadRequest from './errors/BadRequest.js';
+import { register, login } from './controllers/authController.js';
+import { authMiddleware } from './middleware/authMiddleware.js';
 
 const router = Router();
 
@@ -21,8 +23,11 @@ const upload = multer({
     }
 });
 
-router.post('/ingest', upload.single('file'), ingestController);
-router.post('/query', queryController);
-router.get('/documents', documentsController);
+router.post('/ingest', authMiddleware, upload.single('file'), ingestController);
+router.post('/query', authMiddleware, queryController);
+router.get('/documents', authMiddleware, documentsController);
+
+router.post('/auth/register',register);
+router.post('/auth/login', login);
 
 export default router;

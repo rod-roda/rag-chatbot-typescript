@@ -16,9 +16,9 @@ export async function ingestController(req: Request, res: Response, next: NextFu
         const ext = path.extname(originalName).toLowerCase();
 
         if (ext === '.pdf') {
-            await ingestPDF(req.file.path, originalName);
+            await ingestPDF(req.file.path, req.userId, originalName);
         } else {
-            await ingestText(req.file.path, originalName);
+            await ingestText(req.file.path, req.userId, originalName);
         }
 
         fs.unlinkSync(req.file.path);

@@ -25,7 +25,7 @@ export async function queryController(req: Request, res: Response, next: NextFun
             return;
         }
 
-        const chunks = await retrieveChunks(question, 3, 1.5, fileName);
+        const chunks = await retrieveChunks(question, req.userId, 3, 1.5, fileName);
         if(chunks.length === 0){
             next(new NotFound('No relevant information found in the document'));
             return;

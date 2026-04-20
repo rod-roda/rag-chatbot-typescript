@@ -5,7 +5,7 @@ export async function documentsController(req: Request, res: Response, next: Nex
 {
     try {
         const collection = await getCollection('documents');
-        const result = await collection.get({ include: ['metadatas'] });
+        const result = await collection.get({ where: { userId: req.userId },  include: ['metadatas'] });
 
         const fileNames = [...new Set(
             result.metadatas

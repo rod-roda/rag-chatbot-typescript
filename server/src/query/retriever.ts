@@ -10,7 +10,7 @@ export interface RetrievedChunk
     distance: number
 }
 
-export async function retrieveChunks(query: string, k: number = 3, maxDistance: number = 1.5, fileName?: string): Promise<RetrievedChunk[]> 
+export async function retrieveChunks(query: string, userId: string, k: number = 3, maxDistance: number = 1.5, fileName?: string): Promise<RetrievedChunk[]> 
 {
     const collection = await getCollection('documents');
     const embedding = await embedQuery(query);
@@ -20,7 +20,10 @@ export async function retrieveChunks(query: string, k: number = 3, maxDistance: 
         results = await collection.query({
             queryEmbeddings: [embedding],
             nResults: k,
-            ...(fileName && { where: { fileName } })
+            where: {
+                userId,
+                ...(fileName && { fileName })
+            }
         });
     } catch (error) {
         console.error('ChromaDB query error:', error);

@@ -1,20 +1,20 @@
-// --- Carregamento de variáveis de ambiente ---
+// --- Environment variables loading ---
 import "dotenv/config";
 
-// --- Importações de pacotes externos ---
+// --- External packages imports ---
 import express from 'express';
 import cors from 'cors';
 import rateLimit from 'express-rate-limit';
 import type { Request, Response, NextFunction } from "express";
 
-// --- Middlewares e erros ---
+// --- Middlewares and errors ---
 import NotFound from "./api/errors/NotFound.js";
 import errorsMiddleware from "./api/middleware/errorsMiddleware.js";
 
-// --- Banco de dados ---
+// --- Database ---
 import { checkConnection } from "./database/chroma.js";
 
-// --- Providers, Services e Controllers ---
+// --- Providers, Services and Controllers ---
 import { OpenAIEmbeddingProvider } from "./services/providers/OpenAIEmbeddingProvider.js";
 import { ClaudeLLMProvider } from "./services/providers/ClaudeLLMProvider.js";
 import type { LLMProvider } from "./services/providers/LLMProvider.js";
@@ -24,7 +24,7 @@ import { makeIngestController } from "./api/controllers/ingestController.js";
 import { makeQueryController } from "./api/controllers/queryController.js";
 import { createRouter } from "./api/routes.js";
 
-// --- Instância de dependências ---
+// --- Dependencies instantiation ---
 const embeddingProvider = new OpenAIEmbeddingProvider();
 const llmProvider: LLMProvider = new ClaudeLLMProvider();
 const ingestService = new IngestService(embeddingProvider);
@@ -32,15 +32,15 @@ const retrieverService = new RetrieverService(embeddingProvider);
 const ingestController = makeIngestController(ingestService);
 const queryController = makeQueryController(retrieverService, llmProvider);
 
-// --- Função principal de inicialização ---
+// --- Main initialization function ---
 async function main() {
     const app = express();
     const PORT = process.env.PORT ?? 3000;
 
-    // Configurações globais
+    // Global settings
     app.set('trust proxy', 1);
 
-    // Middlewares globais
+    // Global middlewares
     app.use(cors({
         origin: process.env.CORS_ORIGIN || '*',
     }));
@@ -51,30 +51,30 @@ async function main() {
     }));
     app.use(express.json());
 
-    // Health check
+    // Health check route
     app.get('/health', (req: Request, res: Response) => {
         res.json({ status: 'ok', timestamp: new Date().toISOString() });
     });
 
-    // Rotas principais
+    // Main API routes
     app.use('/api', createRouter({ ingestController, queryController }));
 
-    // Rota 404
+    // 404 handler route
     app.use((req: Request, res: Response, next: NextFunction): void => {
         next(new NotFound());
     });
 
-    // Middleware de tratamento de erros
+    // Error handling middleware
     app.use(errorsMiddleware);
 
-    // Testa conexão com o banco
+    // Test database connection
     await checkConnection();
 
-    // Inicializa o servidor
+    // Start HTTP server
     app.listen(PORT, () => {
         console.log(`Server running on port ${PORT}`);
     });
 }
 
-// Executa a função principal
+// Run main function
 main();

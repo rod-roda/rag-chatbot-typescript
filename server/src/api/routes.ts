@@ -6,8 +6,9 @@ import path from 'path';
 import os from 'os';
 
 import { documentsController } from './controllers/documentsController.js';
-import { register, login } from './controllers/authController.js';
+import { register, login, verifyEmail } from './controllers/authController.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
+import { SUPPORTED_MODELS } from '../services/providers/supportedModels.js';
 
 import BadRequest from './errors/BadRequest.js';
 
@@ -33,12 +34,18 @@ export function createRouter({ ingestController, queryController }: RouterDeps)
         }
     });
 
+    router.get('/models', (_req, res) => {
+        const models = Object.entries(SUPPORTED_MODELS).map(([id, { displayName }]) => ({ id, displayName }));
+        res.json(models);
+    });
+
     router.post('/ingest', authMiddleware, upload.single('file'), ingestController);
     router.post('/query', authMiddleware, queryController);
     router.get('/documents', authMiddleware, documentsController);
 
-    router.post('/auth/register',register);
+    router.post('/auth/register', register);
     router.post('/auth/login', login);
+    router.get('/auth/verify-email', verifyEmail);
 
     return router;
 

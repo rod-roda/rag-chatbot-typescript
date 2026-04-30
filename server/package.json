@@ -25,6 +25,7 @@
     "express-rate-limit": "^8.3.2",
     "jsonwebtoken": "^9.0.3",
     "multer": "^2.1.1",
+    "nodemailer": "^8.0.6",
     "openai": "^6.33.0",
     "pdfjs-dist": "^5.5.207"
   },
@@ -36,6 +37,7 @@
     "@types/jsonwebtoken": "^9.0.10",
     "@types/multer": "^2.1.0",
     "@types/node": "^25.5.0",
+    "@types/nodemailer": "^8.0.0",
     "prisma": "^7.7.0",
     "tsx": "^4.21.0",
     "typescript": "^6.0.2",

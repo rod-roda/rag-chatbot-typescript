@@ -33,7 +33,7 @@ function checkUnauthorized(response: Response): void {
     }
 }
 
-export async function registerUser(email: string, password: string): Promise<string> {
+export async function registerUser(email: string, password: string): Promise<void> {
     const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -45,9 +45,20 @@ export async function registerUser(email: string, password: string): Promise<str
     if (!response.ok) {
         throw new Error(data.message ?? 'Failed to register');
     }
+}
+
+export async function verifyEmail(token: string): Promise<void> {
+    const response = await fetch(
+        `${API_URL}/auth/verify-email?token=${encodeURIComponent(token)}`
+    );
+
+    const data = await parseJsonResponse(response, 'Failed to verify email');
+
+    if (!response.ok) {
+        throw new Error(data.message ?? 'Failed to verify email');
+    }
 
     saveToken(data.token);
-    return data.token;
 }
 
 export async function loginUser(email: string, password: string): Promise<string> {
@@ -102,11 +113,23 @@ export interface QueryResponse {
     };
 }
 
-export async function queryDocuments(question: string, fileName?: string): Promise<QueryResponse> {
+export interface ModelOption {
+    id: string;
+    displayName: string;
+}
+
+export async function fetchModels(): Promise<ModelOption[]> {
+    const response = await fetch(`${API_URL}/models`);
+    const data = await parseJsonResponse(response, 'Failed to fetch models');
+    if (!response.ok) throw new Error(data.message ?? 'Failed to fetch models');
+    return data;
+}
+
+export async function queryDocuments(question: string, fileName?: string, modelId?: string): Promise<QueryResponse> {
     const response = await fetch(`${API_URL}/query`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', ...authHeaders() },
-        body: JSON.stringify({ question, ...(fileName && { fileName }) }),
+        body: JSON.stringify({ question, ...(fileName && { fileName }), ...(modelId && { model: modelId }) }),
     });
 
     checkUnauthorized(response);

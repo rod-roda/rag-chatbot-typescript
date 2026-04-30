@@ -8,7 +8,7 @@ interface AuthFormProps {
 }
 
 export default function AuthForm({ onAuth }: AuthFormProps) {
-    const [mode, setMode] = useState<'login' | 'register'>('login');
+    const [mode, setMode] = useState<'login' | 'register' | 'pending'>('login');
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
@@ -16,6 +16,7 @@ export default function AuthForm({ onAuth }: AuthFormProps) {
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
+    const [pendingEmail, setPendingEmail] = useState('');
 
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
@@ -31,6 +32,9 @@ export default function AuthForm({ onAuth }: AuthFormProps) {
         try {
             if (mode === 'register') {
                 await registerUser(email, password);
+                setPendingEmail(email);
+                setMode('pending');
+                return;
             } else {
                 await loginUser(email, password);
             }
@@ -40,6 +44,46 @@ export default function AuthForm({ onAuth }: AuthFormProps) {
         } finally {
             setLoading(false);
         }
+    }
+
+    if (mode === 'pending') {
+        return (
+            <div className="flex items-center justify-center min-h-screen bg-[#f8f9fb]">
+                <div className="w-full max-w-sm mx-4">
+                    <div className="text-center mb-8">
+                        <div className="inline-flex items-center gap-2 mb-3">
+                            <span className="w-2 h-2 rounded-full bg-blue-500" />
+                            <span className="text-sm font-medium text-gray-800 tracking-[0.06em] uppercase">
+                                RAG Studio
+                            </span>
+                        </div>
+                        <p className="text-xs text-gray-400">Check your inbox</p>
+                    </div>
+                    <div className="bg-white border border-gray-200 rounded-xl p-6 space-y-4 text-center">
+                        <p className="text-[13px] text-gray-700">
+                            We sent a verification email to{' '}
+                            <span className="font-medium text-gray-900">{pendingEmail}</span>.
+                            Click the link in the email to activate your account.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setMode('login');
+                                setError('');
+                                setPendingEmail('');
+                                setEmail('');
+                                setPassword('');
+                                setConfirmPassword('');
+                            }}
+                            className="w-full py-2.5 bg-blue-500 text-white text-[13px] font-medium rounded-lg cursor-pointer
+                                transition-all hover:bg-blue-600 active:scale-[0.98]"
+                        >
+                            Back to login
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
     }
 
     return (

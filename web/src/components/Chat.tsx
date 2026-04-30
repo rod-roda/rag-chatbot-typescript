@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { queryDocuments, type QueryResponse } from '@/services/api';
+import { queryDocuments, fetchModels, type QueryResponse, type ModelOption } from '@/services/api';
 
 interface Message {
     id: string;
@@ -28,8 +28,19 @@ export default function Chat({ documents, selectedContext, onToggleSidebar, load
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
+    const [models, setModels] = useState<ModelOption[]>([]);
+    const [selectedModel, setSelectedModel] = useState('');
     const bottomRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    useEffect(() => {
+        fetchModels()
+            .then(data => {
+                setModels(data);
+                if (data.length > 0) setSelectedModel(data[0].id);
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -60,7 +71,7 @@ export default function Chat({ documents, selectedContext, onToggleSidebar, load
         setLoading(true);
 
         try {
-            const data = await queryDocuments(question, selectedContext || undefined);
+            const data = await queryDocuments(question, selectedContext || undefined, selectedModel || undefined);
             setMessages(prev => [...prev, {
                 id: crypto.randomUUID(),
                 role: 'assistant',
@@ -111,9 +122,24 @@ export default function Chat({ documents, selectedContext, onToggleSidebar, load
                         </div>
                     </div>
                 </div>
-                <div className="flex items-center gap-1.5 text-[11px] text-gray-500 shrink-0">
-                    <span className={`w-1.5 h-1.5 rounded-full inline-block ${loadError ? 'bg-red-500' : 'bg-green-500'}`} />
-                    <span className="hidden sm:inline">{loadError ? 'Connection error' : 'Ready'}</span>
+                <div className="flex items-center gap-2.5 shrink-0">
+                    {models.length > 0 && (
+                        <select
+                            value={selectedModel}
+                            onChange={e => setSelectedModel(e.target.value)}
+                            aria-label="Select AI model"
+                            className="text-[11px] text-gray-600 border border-gray-200 rounded-lg px-2 py-1 bg-white
+                                cursor-pointer hover:border-gray-300 focus:outline-none focus:border-blue-400 transition-colors"
+                        >
+                            {models.map(m => (
+                                <option key={m.id} value={m.id}>{m.displayName}</option>
+                            ))}
+                        </select>
+                    )}
+                    <div className="flex items-center gap-1.5 text-[11px] text-gray-500">
+                        <span className={`w-1.5 h-1.5 rounded-full inline-block ${loadError ? 'bg-red-500' : 'bg-green-500'}`} />
+                        <span className="hidden sm:inline">{loadError ? 'Connection error' : 'Ready'}</span>
+                    </div>
                 </div>
             </div>
 

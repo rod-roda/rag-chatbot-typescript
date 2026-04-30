@@ -16,8 +16,7 @@ import { checkConnection } from "./database/chroma.js";
 
 // --- Providers, Services and Controllers ---
 import { OpenAIEmbeddingProvider } from "./services/providers/OpenAIEmbeddingProvider.js";
-import { ClaudeLLMProvider } from "./services/providers/ClaudeLLMProvider.js";
-import type { LLMProvider } from "./services/providers/LLMProvider.js";
+import { LLMProviderFactory } from "./services/providers/LLMProviderFactory.js";
 import { IngestService } from "./ingestion/ingest.js";
 import { RetrieverService } from "./query/retriever.js";
 import { makeIngestController } from "./api/controllers/ingestController.js";
@@ -26,11 +25,11 @@ import { createRouter } from "./api/routes.js";
 
 // --- Dependencies instantiation ---
 const embeddingProvider = new OpenAIEmbeddingProvider();
-const llmProvider: LLMProvider = new ClaudeLLMProvider();
+const llmFactory = new LLMProviderFactory();
 const ingestService = new IngestService(embeddingProvider);
 const retrieverService = new RetrieverService(embeddingProvider);
 const ingestController = makeIngestController(ingestService);
-const queryController = makeQueryController(retrieverService, llmProvider);
+const queryController = makeQueryController(retrieverService, llmFactory);
 
 // --- Main initialization function ---
 async function main() {

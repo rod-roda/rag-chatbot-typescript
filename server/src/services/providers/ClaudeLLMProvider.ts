@@ -5,11 +5,13 @@ import type { LLMProvider, LLMResponse } from "./LLMProvider.js";
 
 export class ClaudeLLMProvider implements LLMProvider
 {
-    async askLLM(prompt: BuiltPrompt): Promise<LLMResponse> 
+    constructor(private readonly model: string = 'claude-sonnet-4-20250514') {}
+
+    async askLLM(prompt: BuiltPrompt): Promise<LLMResponse>
     {
         try {
             const response = await anthropic.messages.create({
-                model: 'claude-sonnet-4-20250514',
+                model: this.model,
                 max_tokens: 1024,
                 system: prompt.system,
                 messages: [

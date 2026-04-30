@@ -3,9 +3,10 @@ import { buildPrompt, type BuiltPrompt } from "../../query/promptBuilder.js";
 import BadRequest from "../errors/BadRequest.js";
 import NotFound from "../errors/NotFound.js";
 import { RetrieverService } from "../../query/retriever.js";
-import type { LLMProvider } from "../../services/providers/LLMProvider.js";
+import { LLMProviderFactory } from "../../services/providers/LLMProviderFactory.js";
+import { DEFAULT_MODEL, isModelId } from "../../services/providers/supportedModels.js";
 
-export function makeQueryController(retriever: RetrieverService, llm: LLMProvider)
+export function makeQueryController(retriever: RetrieverService, factory: LLMProviderFactory)
 {
     return async function(req: Request, res: Response, next: NextFunction): Promise<void>
     {
@@ -20,12 +21,15 @@ export function makeQueryController(retriever: RetrieverService, llm: LLMProvide
                 return;
             }
 
-            const { question, fileName } = req.body;
+            const { question, fileName, model } = req.body;
 
             if(!question || question.trim().length < 5){
                 next(new BadRequest('Question too short or not provided'));
                 return;
             }
+
+            const modelId = isModelId(model) ? model : DEFAULT_MODEL;
+            const llm = factory.getProvider(modelId);
 
             const chunks = await retriever.retrieveChunks(question, req.userId, 3, 1.5, fileName);
             if(chunks.length === 0){

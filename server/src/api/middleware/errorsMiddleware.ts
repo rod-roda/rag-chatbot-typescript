@@ -8,6 +8,7 @@ function errorsMiddleware(error: unknown, request: Request, response: Response, 
     if (error instanceof multer.MulterError) {
         response.status(400).send({ message: error.message, status: 400 });
     } else if (error instanceof DefaultError) {
+        if (error.cause) console.error('[DefaultError cause]', error.cause);
         error.sendResponse(response);
     } else {
         console.error(error);

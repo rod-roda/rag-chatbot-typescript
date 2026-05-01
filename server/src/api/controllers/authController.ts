@@ -68,7 +68,12 @@ export async function register(req: Request, res: Response, next: NextFunction):
             data: { tokenHash, userId: user.id, expiresAt }
         });
 
-        await sendVerificationEmail(email, rawToken);
+        try {
+            await sendVerificationEmail(email, rawToken);
+        } catch (emailError) {
+            await prisma.user.delete({ where: { id: user.id } });
+            throw emailError;
+        }
 
         res.status(201).json({ message: 'Registration successful. Please check your email to verify your account.' });
     } catch (error) {

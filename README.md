@@ -82,7 +82,7 @@ User ──► Auth (JWT + Magic Link email)
 - Docker and Docker Compose
 - OpenAI API key
 - Anthropic API key
-- SMTP credentials (Gmail, SendGrid, etc.) for email verification
+- Resend account and API key (resend.com) for email verification
 
 ### Backend (local)
 
@@ -130,11 +130,8 @@ All variables live in `server/.env` (copy from `server/.env.example`).
 | `DB_HOST` | No | ChromaDB host (default: `localhost`) |
 | `DB_PORT` | No | ChromaDB port (default: `8000`) |
 | `CORS_ORIGIN` | Yes | Allowed frontend origin (e.g. `https://your-app.vercel.app`) |
-| `SMTP_HOST` | Yes | SMTP server (e.g. `smtp.gmail.com`) |
-| `SMTP_PORT` | Yes | SMTP port (e.g. `587`) |
-| `SMTP_USER` | Yes | SMTP username / email |
-| `SMTP_PASS` | Yes | SMTP password / app password |
-| `FROM_EMAIL` | Yes | Sender address shown in verification emails |
+| `RESEND_API_KEY` | Yes | Resend API key for sending verification emails |
+| `FROM_EMAIL` | Yes | Sender address (free tier: `onboarding@resend.dev`) |
 | `FRONTEND_URL` | Yes | Base URL used in Magic Link emails (e.g. `https://your-app.vercel.app`) |
 
 ## Auth Flow
@@ -321,12 +318,9 @@ DATABASE_URL=postgresql://...
 DB_HOST=<chromadb-service-host>
 DB_PORT=8000
 
-# SMTP — use Gmail App Password or SendGrid / Resend
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=you@gmail.com
-SMTP_PASS=<app-password>
-FROM_EMAIL=noreply@yourdomain.com
+# Email (Resend)
+RESEND_API_KEY=re_...
+FROM_EMAIL=onboarding@resend.dev
 
 # Must match your production Vercel URL
 FRONTEND_URL=https://your-app.vercel.app

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import type { RequestHandler } from 'express';
+import rateLimit from 'express-rate-limit';
 
 import multer from 'multer';
 import path from 'path';
@@ -11,6 +12,12 @@ import { authMiddleware } from './middleware/authMiddleware.js';
 import { SUPPORTED_MODELS } from '../services/providers/supportedModels.js';
 
 import BadRequest from './errors/BadRequest.js';
+
+const authRateLimit = rateLimit({
+    windowMs: 15 * 60_000,
+    max: 10,
+    message: { error: 'Too many attempts, please try again later.' },
+});
 
 interface RouterDeps
 {
@@ -43,8 +50,8 @@ export function createRouter({ ingestController, queryController }: RouterDeps)
     router.post('/query', authMiddleware, queryController);
     router.get('/documents', authMiddleware, documentsController);
 
-    router.post('/auth/register', register);
-    router.post('/auth/login', login);
+    router.post('/auth/register', authRateLimit, register);
+    router.post('/auth/login', authRateLimit, login);
     router.get('/auth/verify-email', verifyEmail);
 
     return router;

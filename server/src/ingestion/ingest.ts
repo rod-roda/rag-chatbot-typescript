@@ -31,7 +31,7 @@ export class IngestService
     {
         const chunks = chunkText(text);
         const collection = await getCollection('documents');
-        const hash = crypto.createHash('sha256').update(text).digest('hex').slice(0, 12);
+        const hash = crypto.createHash('sha256').update(userId + text).digest('hex').slice(0, 12);
         const embeddings = await this.embeddingProvider.embedTexts(chunks);
 
         await this.removeExistingChunks(fileName, userId);

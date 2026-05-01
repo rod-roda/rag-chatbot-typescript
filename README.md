@@ -1,62 +1,77 @@
 # RAG Chatbot
 
-Upload PDFs or text files, index chunks, and get LLM answers with cited snippets via a simple API.
+Upload PDFs or text files, ask questions, and get LLM-generated answers cited against your documents. Supports multiple models (Claude and GPT-4o) with a secure authentication system.
 
 ## Architecture
 
 ```
-User ──► Express API ──► Multer (file upload)
+User ──► Auth (JWT + Magic Link email)
               │
               ▼
-         Loader (PDF/TXT)
+         Express API ──► Multer (file upload)
               │
               ▼
-         Chunker (500 chars, 50 overlap)
+         Loader (PDF/TXT) ──► Chunker (500 chars, 50 overlap)
               │
               ▼
          OpenAI Embeddings (text-embedding-3-small)
               │
               ▼
-         ChromaDB (vector storage)
+         ChromaDB (vectors, per-user isolation)
               │
               ▼
-         Query ──► Embed question ──► Retrieve top-k chunks ──► Build prompt ──► Claude (claude-sonnet-4-20250514)
+         Query ──► Embed question ──► Retrieve top-k chunks ──► Build prompt
+              │
+              ▼
+         LLM Provider (Claude Sonnet 4 | Haiku 4.5 | GPT-4o | GPT-4o mini)
               │
               ▼
          Response { answer, citations[], usage }
 ```
 
-**Stack:** Express 5 · TypeScript · ChromaDB · OpenAI Embeddings · Anthropic Claude · Next.js (frontend)
+**Stack:** Express 5 · TypeScript · PostgreSQL (Prisma) · ChromaDB · OpenAI Embeddings · Anthropic Claude · OpenAI GPT · Next.js 16
 
 ## Project Structure
 
 ```
 ├── server/                  # Backend API
 │   ├── src/
-│   │   ├── index.ts         # Express app entry point
+│   │   ├── index.ts         # App entry: env validation, DI wiring, middleware
 │   │   ├── api/
-│   │   │   ├── routes.ts    # POST /ingest, POST /query, GET /documents
-│   │   │   ├── controllers/ # Request handling logic
-│   │   │   ├── errors/      # Custom error hierarchy
-│   │   │   └── middleware/   # Centralized error handler
+│   │   │   ├── routes.ts    # All routes with rate limiting
+│   │   │   ├── controllers/ # authController, ingestController, queryController, documentsController
+│   │   │   ├── errors/      # Custom error hierarchy (DefaultError → BadRequest, Unauthorized, …)
+│   │   │   └── middleware/  # authMiddleware (JWT), errorsMiddleware (centralized handler)
 │   │   ├── ingestion/
-│   │   │   ├── loader.ts    # PDF and TXT text extraction
-│   │   │   ├── chunker.ts   # Text splitting with overlap
-│   │   │   └── ingest.ts    # Orchestrates load → chunk → embed → store
+│   │   │   ├── loader.ts    # PDF (pdfjs) and TXT extraction + text cleaning
+│   │   │   ├── chunker.ts   # Text splitting with overlap, min-length filter
+│   │   │   └── ingest.ts    # Orchestrates load → chunk → embed → upsert ChromaDB
 │   │   ├── query/
-│   │   │   ├── retriever.ts # Vector similarity search
-│   │   │   ├── promptBuilder.ts # System + user prompt assembly
-│   │   │   └── llm.ts       # Claude API call
-│   │   ├── services/        # External API clients (OpenAI, Anthropic)
-│   │   ├── database/        # ChromaDB connection
-│   │   └── tests/           # Unit tests (Vitest)
+│   │   │   ├── retriever.ts     # Cosine similarity search (k=3, maxDistance=1.5)
+│   │   │   └── promptBuilder.ts # System + user prompt with numbered excerpts
+│   │   ├── services/
+│   │   │   ├── emailService.ts  # Magic Link emails via nodemailer
+│   │   │   └── providers/       # LLMProvider interface, Factory, Claude/OpenAI impls, EmbeddingProvider
+│   │   ├── database/
+│   │   │   ├── prisma.ts    # PostgreSQL client (Prisma + pg adapter)
+│   │   │   └── chroma.ts    # ChromaDB client + collection helper
+│   │   └── tests/           # Vitest unit tests
+│   ├── prisma/
+│   │   ├── schema.prisma    # User + EmailVerificationToken models
+│   │   └── migrations/      # Prisma migration files
 │   ├── Dockerfile
-│   └── docker-compose.yml
-└── web/                     # Frontend (Next.js)
+│   └── docker-compose.yml   # API + PostgreSQL + ChromaDB
+└── web/                     # Frontend (Next.js 16, App Router)
     └── src/
-        ├── app/             # App Router pages
-        ├── components/      # FileUpload, Chat
-        └── services/        # API client functions
+        ├── app/
+        │   ├── page.tsx          # Main hub: auth state → AuthForm or Chat+Sidebar
+        │   └── verify-email/     # Magic Link callback page
+        ├── components/
+        │   ├── AuthForm.tsx      # Login / Register / Pending states
+        │   ├── Chat.tsx          # Message thread + model selector
+        │   └── Sidebar.tsx       # Document upload + context selector
+        └── services/
+            └── api.ts            # Typed API client with token management
 ```
 
 ## Getting Started
@@ -64,156 +79,264 @@ User ──► Express API ──► Multer (file upload)
 ### Prerequisites
 
 - Node.js 22+
-- Docker and Docker Compose (for ChromaDB)
+- Docker and Docker Compose
 - OpenAI API key
 - Anthropic API key
+- SMTP credentials (Gmail, SendGrid, etc.) for email verification
 
-### Backend
+### Backend (local)
 
 ```bash
 cd server
-cp .env.example .env        # Fill in your API keys
-docker compose up chromadb   # Start ChromaDB
+cp .env.example .env        # Fill in all variables — see table below
+docker compose up -d postgres chromadb
+npx prisma migrate deploy   # Run once to set up the database
 npm install
 npm run dev                  # Starts on port 3000
 ```
 
-### Frontend
+### Frontend (local)
 
 ```bash
 cd web
+echo "NEXT_PUBLIC_API_URL=http://localhost:3000/api" > .env.local
 npm install
 npm run dev                  # Starts on port 3001
 ```
 
-### Full Stack via Docker
+### Full stack via Docker
 
 ```bash
 cd server
-cp .env.example .env        # Fill in your API keys
-docker compose up --build    # Starts API + ChromaDB
+cp .env.example .env        # Fill in all variables
+docker compose up --build    # Starts API + PostgreSQL + ChromaDB
 ```
+
+## Environment Variables
+
+All variables live in `server/.env` (copy from `server/.env.example`).
+
+| Variable | Required | Description |
+|---|---|---|
+| `PORT` | No | API port (default: `3000`) |
+| `OPENAI_API_KEY` | Yes | Embeddings (`text-embedding-3-small`) |
+| `ANTHROPIC_API_KEY` | Yes | Claude LLM calls |
+| `JWT_SECRET` | Yes | Secret for signing JWTs — use a long random string |
+| `JWT_EXPIRES_IN` | No | Token lifetime (default: `7d`) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string (e.g. `postgresql://user:pass@host:5432/db`) |
+| `POSTGRES_USER` | Yes | Used by Docker Compose to create the DB |
+| `POSTGRES_PASSWORD` | Yes | PostgreSQL password |
+| `POSTGRES_DB` | Yes | Database name |
+| `DB_HOST` | No | ChromaDB host (default: `localhost`) |
+| `DB_PORT` | No | ChromaDB port (default: `8000`) |
+| `CORS_ORIGIN` | Yes | Allowed frontend origin (e.g. `https://your-app.vercel.app`) |
+| `SMTP_HOST` | Yes | SMTP server (e.g. `smtp.gmail.com`) |
+| `SMTP_PORT` | Yes | SMTP port (e.g. `587`) |
+| `SMTP_USER` | Yes | SMTP username / email |
+| `SMTP_PASS` | Yes | SMTP password / app password |
+| `FROM_EMAIL` | Yes | Sender address shown in verification emails |
+| `FRONTEND_URL` | Yes | Base URL used in Magic Link emails (e.g. `https://your-app.vercel.app`) |
+
+## Auth Flow
+
+1. **Register** — POST `/api/auth/register` with email + password. Backend sends a Magic Link email.
+2. **Verify email** — User clicks the link → `GET /api/auth/verify-email?token=…` → backend validates SHA-256 token hash, marks user verified, returns a JWT.
+3. **Login** — POST `/api/auth/login`. Returns JWT (blocked with 403 if email not yet verified).
+4. **Authenticated requests** — All non-auth endpoints require `Authorization: Bearer <jwt>`.
+
+Password requirements: minimum 6 chars, at least one uppercase letter, one number, one special character.
 
 ## API Endpoints
 
-### `POST /api/ingest`
+All endpoints are prefixed with `/api`.
 
-Upload a PDF or TXT file to be indexed.
+### Auth
 
-```bash
-curl -F "file=@document.pdf" http://localhost:3000/api/ingest
+```
+POST /auth/register      { email, password }              → 201
+POST /auth/login         { email, password }              → 200 { token }
+GET  /auth/verify-email  ?token=<raw_token>               → 200 { token }
 ```
 
-**Response:**
-```json
-{ "message": "Document processed and vectors saved successfully." }
+### Documents
+
+```
+POST /ingest    Authorization: Bearer <jwt>   multipart/form-data (field: file)  → 201
+GET  /documents Authorization: Bearer <jwt>                                       → 200 { documents: string[] }
 ```
 
-### `POST /api/query`
+### Query
 
-Ask a question about the indexed documents.
+```
+POST /query   Authorization: Bearer <jwt>
+              { question, fileName?: string, model?: string }
+              → 200 { answer, citations[], usage: { inputTokens, outputTokens } }
+```
+
+### Models
+
+```
+GET /models   → 200 { models: [{ id, displayName }] }
+```
+
+### Example
 
 ```bash
+# Register
+curl -X POST http://localhost:3000/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"email":"you@example.com","password":"Secret1!"}'
+
+# (click magic link in email, get JWT)
+
+# Upload a document
+curl -F "file=@report.pdf" \
+  -H "Authorization: Bearer <jwt>" \
+  http://localhost:3000/api/ingest
+
+# Ask a question (optionally pin to a file and select model)
 curl -X POST http://localhost:3000/api/query \
   -H "Content-Type: application/json" \
-  -d '{"question": "What does the document say about X?"}'
+  -H "Authorization: Bearer <jwt>" \
+  -d '{"question":"What are the main findings?","model":"gpt-4o"}'
 ```
 
-**Response:**
+**Query response:**
 ```json
 {
-  "answer": "According to the document [Excerpt 1], ...",
+  "answer": "According to [Excerpt 1], the main findings are…",
   "citations": [
-    { "content": "...", "source": "abc123", "chunkIndex": 0 }
+    { "content": "…excerpt text…", "source": "abc123", "chunkIndex": 0, "distance": 0.42 }
   ],
-  "usage": { "inputTokens": 512, "outputTokens": 150 }
+  "usage": { "inputTokens": 512, "outputTokens": 148 }
 }
 ```
 
-## Design Decisions
+## Supported LLM Models
 
-### Why OpenAI for embeddings + Anthropic for generation?
+| Model ID | Provider | Notes |
+|---|---|---|
+| `claude-sonnet-4-20250514` | Anthropic | Default |
+| `claude-haiku-4-5-20251001` | Anthropic | Faster, cheaper |
+| `gpt-4o` | OpenAI | |
+| `gpt-4o-mini` | OpenAI | Faster, cheaper |
 
-OpenAI's `text-embedding-3-small` offers strong embedding quality at low cost. Claude Sonnet excels at following instructions precisely — critical for a RAG system where the model must stay grounded in the provided context and cite sources accurately.
-
-### Why ChromaDB?
-
-Lightweight, runs locally via Docker, and has a simple JS client. For a project of this scope, a managed vector database (Pinecone, Weaviate) would add infrastructure complexity without meaningful benefit.
-
-### Why chunk size 500 with overlap 50?
-
-500 characters balances context richness with retrieval precision — short enough to be specific, long enough to carry meaning. The 50-character overlap prevents information loss at chunk boundaries. Chunks under 50 characters are filtered out as they rarely contain useful content.
-
-### Why filter by maxDistance 1.5?
-
-Cosine distance threshold to avoid returning irrelevant chunks when the user's question doesn't relate to any indexed content. Without this, the system would hallucinate answers from loosely related text.
-
-### Why a custom error hierarchy?
-
-```
-DefaultError (500)
-├── BadRequest (400)
-│   └── EmptyDocumentError (400)
-├── NotFound (404)
-└── BadGateway (502)
-    ├── OpenAIError (502)
-    └── AnthropicError (502)
-```
-
-Every error flows through a single middleware. External API failures map to 502 (Bad Gateway) because the server itself is working correctly — the upstream dependency failed. This keeps error responses consistent and the controller code clean.
-
-### Why rate limiting?
-
-30 requests/minute per IP. Since the API calls paid external services (OpenAI, Anthropic), uncontrolled access could generate significant costs. Even for a demo, this is a deliberate security choice.
-
-### Why delete before re-upload?
-
-When a user uploads a file with the same name, the system deletes all existing chunks for that `fileName` before indexing the new content. This is necessary because chunk IDs are derived from a content hash — uploading a different version of the same file would generate new IDs, leaving orphan chunks from the previous version in the database.
-
-### Why `tsx` instead of compiling to JavaScript?
-
-For this project scope, `tsx` simplifies the development and deployment workflow by running TypeScript directly. In a production environment with stricter performance requirements, a build step compiling to JavaScript (`tsc` + `node dist/index.js`) would be preferred to eliminate the runtime transpilation overhead.
-
-### Security considerations
-
-- **Rate limiting** protects against abuse and cost overruns
-- **`trust proxy`** is enabled for correct IP resolution behind reverse proxies (Railway, Vercel)
-- **Content-Type validation** on POST endpoints prevents malformed requests
-- **File type/size validation** via Multer (PDF/TXT only, 10MB max)
-- **CORS origin** configurable via environment variable
-- **Temporary file cleanup** guaranteed in both success and error paths
+The model is selected per-query via the `model` field (or the UI dropdown). Embeddings always use OpenAI `text-embedding-3-small` regardless of the chosen LLM.
 
 ## Testing
 
 ```bash
 cd server
-npm test
+npm test                                          # Full suite
+npx vitest run src/tests/authController.test.ts  # Single file
+npx vitest watch                                  # Watch mode
 ```
 
-Tests covering the core pure logic:
-- **chunker.test.ts** — chunk size, overlap, filtering, edge cases
-- **loader.test.ts** — text loading, cleaning, empty file handling
-- **promptBuilder.test.ts** — prompt structure, chunk formatting, citation instructions
+Coverage:
+- **authController.test.ts** — registration validation, Magic Link verification, login (including email-not-verified case)
+- **authMiddleware.test.ts** — JWT parsing, expired tokens, missing header
+- **chunker.test.ts** — chunk size, overlap, minimum-length filtering
+- **loader.test.ts** — PDF/TXT extraction, character cleaning, empty file error
+- **promptBuilder.test.ts** — prompt structure, numbered excerpts, citation instructions
+
+## Design Decisions
+
+### Why OpenAI for embeddings + choice of LLM for generation?
+
+OpenAI's `text-embedding-3-small` offers strong quality at low cost and is kept as the single embedding model to keep vector space consistent. The generation model is decoupled via a `LLMProvider` interface — controllers never know which provider they're calling, making it trivial to add new models.
+
+### Why ChromaDB?
+
+Lightweight, runs locally via Docker, no managed service required. For a project of this scope, a managed vector database would add cost and complexity without meaningful benefit.
+
+### Why chunk size 500 with overlap 50?
+
+500 characters balances context richness with retrieval precision. The 50-character overlap prevents information loss at chunk boundaries. Chunks under 50 characters are filtered out as they rarely carry useful content.
+
+### Why filter by maxDistance 1.5?
+
+Prevents returning irrelevant chunks when the question has no relation to indexed content. Without a threshold, the system would pass loosely related text to the LLM and encourage hallucination.
+
+### Why Magic Link for email verification?
+
+Simpler UX than a code-entry flow — one click and the user is verified. The raw token is never stored; only its SHA-256 hash lives in the database, limiting exposure if the DB is compromised. Tokens expire after 24 hours.
+
+### Why PostgreSQL?
+
+User accounts and verification tokens require relational guarantees (foreign keys, unique constraints, atomic updates). ChromaDB handles vectors; PostgreSQL handles identity.
+
+### Error hierarchy
+
+```
+DefaultError (500)
+├── BadRequest (400)
+│   └── EmptyDocumentError
+├── Unauthorized (401)
+├── Forbidden (403)
+├── NotFound (404)
+└── BadGateway (502)
+    ├── OpenAIError
+    ├── AnthropicError
+    └── SmtpError
+```
+
+Every error flows through a single middleware. External API failures map to 502 (the server is healthy; the upstream dependency failed). This keeps controller code clean and responses consistent.
+
+### Rate limiting
+
+Auth endpoints: 10 req / 15 min. Global: 30 req / min. Protects paid API usage even in demo environments.
+
+### Security highlights
+
+- Bcrypt password hashing (10 rounds)
+- JWT stateless auth (7-day expiry by default)
+- Verification tokens stored as SHA-256 hashes only
+- Helmet security headers
+- CORS restricted to configured origin
+- File type/size validation via Multer (PDF/TXT, 10 MB max)
+- Non-root user in Docker image
+- Temporary file cleanup guaranteed on both success and error paths
 
 ## Deployment
 
-- **Frontend:** Vercel (Root Directory: `web`)
-- **Backend:** Railway (Root Directory: `server`, uses Dockerfile)
-- **ChromaDB:** Railway (Docker Image: `chromadb/chroma:latest`)
+| Service | Platform | Config |
+|---|---|---|
+| Frontend | Vercel | Root directory: `web` |
+| Backend API | Railway | Root directory: `server`, uses `Dockerfile` |
+| PostgreSQL | Railway | Add a PostgreSQL service |
+| ChromaDB | Railway | Docker image: `chromadb/chroma:latest` |
 
-Environment variables are configured per-platform — no secrets in the repository.
+### Railway — required environment variables
 
+In addition to API keys already set, add:
 
-## Additional Notes
+```
+JWT_SECRET=<long random string>
+JWT_EXPIRES_IN=7d
 
-### API endpoint for listing indexed documents
+# From the Railway PostgreSQL service (auto-filled if using Railway Postgres)
+DATABASE_URL=postgresql://...
 
-Although the challenge only requires an API, this project includes a frontend for demonstration purposes. To support the UI (and future integrations), the backend exposes a `GET /api/documents` endpoint that lists all unique file names currently indexed in ChromaDB. This endpoint is optional and does not affect the core API functionality. It is a common practice in real-world APIs to provide such endpoints for better integration and user experience.
+# ChromaDB service internal URL
+DB_HOST=<chromadb-service-host>
+DB_PORT=8000
 
-### What happens if a non-existent fileName is queried?
+# SMTP — use Gmail App Password or SendGrid / Resend
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=you@gmail.com
+SMTP_PASS=<app-password>
+FROM_EMAIL=noreply@yourdomain.com
 
-If the user queries the API with a `fileName` that does not exist in the database, the system simply returns an empty result (no chunks/snippets found). This does not cause errors or break the API; the LLM will respond that no relevant information was found. This behavior is intentional and robust, ensuring the API remains stable regardless of user input.
+# Must match your production Vercel URL
+FRONTEND_URL=https://your-app.vercel.app
+CORS_ORIGIN=https://your-app.vercel.app
+```
 
-### What happens when the same file is uploaded again?
+Migrations run automatically on container start (`prisma migrate deploy` in the Dockerfile entrypoint).
 
-The system detects re-uploads by `fileName` and removes all previously indexed chunks for that file before processing the new version. This ensures the database always reflects the latest content without duplicates or orphan data.
+### Vercel — required environment variables
+
+```
+NEXT_PUBLIC_API_URL=https://your-backend.railway.app/api
+```

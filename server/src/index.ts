@@ -1,9 +1,19 @@
 // --- Environment variables loading ---
 import "dotenv/config";
 
+// --- Startup validation ---
+const REQUIRED_ENV = ['JWT_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY'] as const;
+for (const key of REQUIRED_ENV) {
+    if (!process.env[key]) {
+        console.error(`Missing required environment variable: ${key}`);
+        process.exit(1);
+    }
+}
+
 // --- External packages imports ---
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import type { Request, Response, NextFunction } from "express";
 
@@ -40,6 +50,7 @@ async function main() {
     app.set('trust proxy', 1);
 
     // Global middlewares
+    app.use(helmet());
     app.use(cors({
         origin: process.env.CORS_ORIGIN || '*',
     }));

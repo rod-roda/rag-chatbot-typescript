@@ -2,7 +2,8 @@
 import "dotenv/config";
 
 // --- Startup validation ---
-const REQUIRED_ENV = ['JWT_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'RESEND_API_KEY'] as const;
+//const REQUIRED_ENV = ['JWT_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'RESEND_API_KEY'] as const;
+const REQUIRED_ENV = ['JWT_SECRET', 'OPENAI_API_KEY', 'ANTHROPIC_API_KEY', 'SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASS', 'FROM_EMAIL'] as const;
 for (const key of REQUIRED_ENV) {
     if (!process.env[key]) {
         console.error(`Missing required environment variable: ${key}`);

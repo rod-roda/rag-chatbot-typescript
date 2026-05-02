@@ -19,6 +19,7 @@ model User {
   emailVerified           Boolean                  @default(false)
   createdAt               DateTime                 @default(now())
   emailVerificationTokens EmailVerificationToken[]
+  chats                   Chat[]
 }
 
 model EmailVerificationToken {
@@ -27,4 +28,23 @@ model EmailVerificationToken {
   userId    String
   expiresAt DateTime
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Chat {
+  id        String    @id @default(uuid())
+  userId    String
+  title     String
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages  Message[]
+}
+
+model Message {
+  id        String   @id @default(uuid())
+  chatId    String
+  role      String
+  content   String
+  citations String?
+  createdAt DateTime @default(now())
+  chat      Chat     @relation(fields: [chatId], references: [id], onDelete: Cascade)
 }

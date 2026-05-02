@@ -1,6 +1,6 @@
 # RAG Chatbot
 
-Upload PDFs or text files, ask questions, and get LLM-generated answers cited against your documents. Supports multiple models (Claude and GPT-4o) with a secure authentication system.
+Upload PDFs or text files, ask questions, and get LLM-generated answers cited against your documents. Supports multiple models (Claude and GPT-4o) with a secure authentication system and persistent chat history.
 
 ## Architecture
 
@@ -27,6 +27,9 @@ User ──► Auth (JWT + Magic Link email)
               │
               ▼
          Response { answer, citations[], usage }
+              │
+              ▼
+         PostgreSQL ──► Persist chat session + messages (for display only)
 ```
 
 **Stack:** Express 5 · TypeScript · PostgreSQL (Prisma) · ChromaDB · OpenAI Embeddings · Anthropic Claude · OpenAI GPT · Next.js 16
@@ -39,7 +42,7 @@ User ──► Auth (JWT + Magic Link email)
 │   │   ├── index.ts         # App entry: env validation, DI wiring, middleware
 │   │   ├── api/
 │   │   │   ├── routes.ts    # All routes with rate limiting
-│   │   │   ├── controllers/ # authController, ingestController, queryController, documentsController
+│   │   │   ├── controllers/ # authController, ingestController, queryController, documentsController, chatController
 │   │   │   ├── errors/      # Custom error hierarchy (DefaultError → BadRequest, Unauthorized, …)
 │   │   │   └── middleware/  # authMiddleware (JWT), errorsMiddleware (centralized handler)
 │   │   ├── ingestion/
@@ -57,7 +60,7 @@ User ──► Auth (JWT + Magic Link email)
 │   │   │   └── chroma.ts    # ChromaDB client + collection helper
 │   │   └── tests/           # Vitest unit tests
 │   ├── prisma/
-│   │   ├── schema.prisma    # User + EmailVerificationToken models
+│   │   ├── schema.prisma    # User, EmailVerificationToken, Chat, Message models
 │   │   └── migrations/      # Prisma migration files
 │   ├── Dockerfile
 │   └── docker-compose.yml   # API + PostgreSQL + ChromaDB
@@ -68,8 +71,8 @@ User ──► Auth (JWT + Magic Link email)
         │   └── verify-email/     # Magic Link callback page
         ├── components/
         │   ├── AuthForm.tsx      # Login / Register / Pending states
-        │   ├── Chat.tsx          # Message thread + model selector
-        │   └── Sidebar.tsx       # Document upload + context selector
+        │   ├── Chat.tsx          # Message thread + model selector + history loader
+        │   └── Sidebar.tsx       # Docs tab (upload + context) · Chats tab (session history)
         └── services/
             └── api.ts            # Typed API client with token management
 ```
@@ -170,6 +173,20 @@ POST /query   Authorization: Bearer <jwt>
               → 200 { answer, citations[], usage: { inputTokens, outputTokens } }
 ```
 
+### Chat History
+
+```
+POST   /chats                    { title }                           → 201 { id, title, createdAt }
+GET    /chats                                                        → 200 Chat[]
+DELETE /chats/:id                                                    → 204
+GET    /chats/:id/messages                                           → 200 Message[]
+POST   /chats/:id/messages       { messages: [{ role, content, citations? }] }  → 201
+```
+
+All chat endpoints require `Authorization: Bearer <jwt>`. Chat sessions and messages are scoped to the authenticated user.
+
+> **Note:** Chat history is stored for display purposes only. The message history is never included in the LLM prompt — each query runs independently against the RAG pipeline with only the retrieved document chunks as context.
+
 ### Models
 
 ```
@@ -260,7 +277,17 @@ Simpler UX than a code-entry flow — one click and the user is verified. The ra
 
 ### Why PostgreSQL?
 
-User accounts and verification tokens require relational guarantees (foreign keys, unique constraints, atomic updates). ChromaDB handles vectors; PostgreSQL handles identity.
+User accounts, verification tokens, chat sessions, and messages require relational guarantees (foreign keys, unique constraints, cascade deletes). ChromaDB handles vectors; PostgreSQL handles identity and history.
+
+### Why is chat history display-only and not sent to the LLM?
+
+This is an intentional RAG design constraint. The purpose of the system is to answer questions grounded exclusively in the indexed documents. Including conversation history in the prompt would:
+
+1. Dilute the document-grounded context, potentially mixing prior answers with fresh retrieval.
+2. Increase token usage and cost on every follow-up message.
+3. Risk the LLM reasoning from its own prior outputs instead of the source documents.
+
+Each query is independent: embed the question → retrieve top-k chunks → answer. The chat log is persisted in PostgreSQL so users can revisit past conversations, but it never reaches the LLM prompt.
 
 ### Error hierarchy
 

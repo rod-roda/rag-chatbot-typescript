@@ -1,7 +1,15 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { queryDocuments, fetchModels, type QueryResponse, type ModelOption } from '@/services/api';
+import {
+    queryDocuments,
+    fetchModels,
+    createChat,
+    getChatMessages,
+    saveMessages,
+    type QueryResponse,
+    type ModelOption,
+} from '@/services/api';
 
 interface Message {
     id: string;
@@ -16,6 +24,8 @@ interface ChatProps {
     selectedContext: string;
     onToggleSidebar: () => void;
     loadError?: boolean;
+    currentChatId: string | null;
+    onChatCreated: (chatId: string, title: string, createdAt: string) => void;
 }
 
 const tips = [
@@ -24,14 +34,17 @@ const tips = [
     { icon: '💡', text: 'Ask about concepts, definitions, or data that appear in your files' },
 ];
 
-export default function Chat({ documents, selectedContext, onToggleSidebar, loadError }: ChatProps) {
+export default function Chat({ documents, selectedContext, onToggleSidebar, loadError, currentChatId, onChatCreated }: ChatProps) {
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState('');
     const [loading, setLoading] = useState(false);
     const [models, setModels] = useState<ModelOption[]>([]);
     const [selectedModel, setSelectedModel] = useState('');
+    const [copiedId, setCopiedId] = useState<string | null>(null);
     const bottomRef = useRef<HTMLDivElement>(null);
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+    // Prevents reloading messages when we just created a new chat during handleSend
+    const justCreatedRef = useRef(false);
 
     useEffect(() => {
         fetchModels()
@@ -43,11 +56,42 @@ export default function Chat({ documents, selectedContext, onToggleSidebar, load
     }, []);
 
     useEffect(() => {
+        if (justCreatedRef.current) {
+            justCreatedRef.current = false;
+            return;
+        }
+        setMessages([]);
+        if (currentChatId === null) return;
+
+        let cancelled = false;
+        getChatMessages(currentChatId)
+            .then(data => {
+                if (cancelled) return;
+                setMessages(data.map(m => ({
+                    id: m.id,
+                    role: m.role as Message['role'],
+                    content: m.content,
+                    citations: m.citations,
+                    timestamp: new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                })));
+            })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [currentChatId]);
+
+    useEffect(() => {
         bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
     }, [messages, loading]);
 
     function getTimestamp() {
         return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function handleCopy(id: string, content: string) {
+        navigator.clipboard.writeText(content).then(() => {
+            setCopiedId(id);
+            setTimeout(() => setCopiedId(prev => prev === id ? null : prev), 2000);
+        }).catch(() => {});
     }
 
     function autoGrow(el: HTMLTextAreaElement) {
@@ -62,23 +106,44 @@ export default function Chat({ documents, selectedContext, onToggleSidebar, load
         setInput('');
         if (textareaRef.current) textareaRef.current.style.height = 'auto';
 
-        setMessages(prev => [...prev, {
+        const userMessage: Message = {
             id: crypto.randomUUID(),
             role: 'user',
             content: question,
             timestamp: getTimestamp(),
-        }]);
+        };
+        setMessages(prev => [...prev, userMessage]);
         setLoading(true);
 
+        let activeChatId = currentChatId;
+
         try {
+            if (activeChatId === null) {
+                const chat = await createChat(question.slice(0, 60));
+                justCreatedRef.current = true;
+                onChatCreated(chat.id, chat.title, chat.createdAt);
+                activeChatId = chat.id;
+            }
+
             const data = await queryDocuments(question, selectedContext || undefined, selectedModel || undefined);
-            setMessages(prev => [...prev, {
+
+            const assistantMessage: Message = {
                 id: crypto.randomUUID(),
                 role: 'assistant',
                 content: data.answer,
                 citations: data.citations,
                 timestamp: getTimestamp(),
-            }]);
+            };
+            setMessages(prev => [...prev, assistantMessage]);
+
+            try {
+                await saveMessages(activeChatId, [
+                    { role: 'user', content: question },
+                    { role: 'assistant', content: data.answer, citations: data.citations },
+                ]);
+            } catch {
+                // persistence failure — message visible but won't survive reload
+            }
         } catch (err) {
             setMessages(prev => [...prev, {
                 id: crypto.randomUUID(),
@@ -211,8 +276,25 @@ export default function Chat({ documents, selectedContext, onToggleSidebar, load
                                 </div>
                             )}
 
-                            <div className={`text-[10px] text-gray-400 mt-1.5 px-0.5 ${msg.role === 'user' ? 'text-right' : ''}`}>
-                                {msg.timestamp}
+                            <div className={`flex items-center gap-2 mt-1.5 px-0.5 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                                <span className="text-[10px] text-gray-400">{msg.timestamp}</span>
+                                {msg.role === 'assistant' && (
+                                    <button
+                                        onClick={() => handleCopy(msg.id, msg.content)}
+                                        aria-label="Copy message"
+                                        className="text-gray-300 hover:text-gray-500 transition-colors cursor-pointer"
+                                    >
+                                        {copiedId === msg.id ? (
+                                            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-green-500" aria-hidden="true">
+                                                <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                            </svg>
+                                        ) : (
+                                            <svg viewBox="0 0 24 24" className="w-3.5 h-3.5 fill-current" aria-hidden="true">
+                                                <path d="M16 1H4c-1.1 0-2 .9-2 2v14h2V3h12V1zm3 4H8c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h11c1.1 0 2-.9 2-2V7c0-1.1-.9-2-2-2zm0 16H8V7h11v14z"/>
+                                            </svg>
+                                        )}
+                                    </button>
+                                )}
                             </div>
                         </div>
                     </div>

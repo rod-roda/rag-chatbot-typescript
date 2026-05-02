@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Chat from '@/components/Chat';
 import AuthForm from '@/components/AuthForm';
-import { listDocuments, getToken, removeToken } from '@/services/api';
+import { listDocuments, listChats, getToken, removeToken, type Chat } from '@/services/api';
 
 export default function Home() {
     const [authenticated, setAuthenticated] = useState(false);
@@ -13,6 +13,8 @@ export default function Home() {
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loadError, setLoadError] = useState(false);
+    const [chats, setChats] = useState<Chat[]>([]);
+    const [currentChatId, setCurrentChatId] = useState<string | null>(null);
 
     useEffect(() => {
         setAuthenticated(!!getToken());
@@ -23,6 +25,8 @@ export default function Home() {
         setAuthenticated(false);
         setDocuments([]);
         setSelectedContext('');
+        setChats([]);
+        setCurrentChatId(null);
     }, []);
 
     useEffect(() => {
@@ -41,6 +45,30 @@ export default function Home() {
             .catch(() => { if (!cancelled) setLoadError(true); });
         return () => { cancelled = true; };
     }, [refreshTrigger, authenticated]);
+
+    useEffect(() => {
+        if (!authenticated) return;
+        let cancelled = false;
+        listChats()
+            .then(data => { if (!cancelled) setChats(data); })
+            .catch(() => {});
+        return () => { cancelled = true; };
+    }, [authenticated]);
+
+    const handleSelectChat = useCallback((chatId: string) => {
+        setCurrentChatId(chatId);
+        setSidebarOpen(false);
+    }, []);
+
+    const handleNewChat = useCallback(() => {
+        setCurrentChatId(null);
+        setSidebarOpen(false);
+    }, []);
+
+    const handleChatCreated = useCallback((id: string, title: string, createdAt: string) => {
+        setChats(prev => [{ id, title, createdAt }, ...prev]);
+        setCurrentChatId(id);
+    }, []);
 
     if (!authenticated) {
         return <AuthForm onAuth={() => setAuthenticated(true)} />;
@@ -66,12 +94,22 @@ export default function Home() {
                 open={sidebarOpen}
                 onClose={() => setSidebarOpen(false)}
                 onLogout={handleLogout}
+                chats={chats}
+                currentChatId={currentChatId}
+                onSelectChat={handleSelectChat}
+                onNewChat={handleNewChat}
+                onDeleteChat={(id) => {
+                    setChats(prev => prev.filter(c => c.id !== id));
+                    if (currentChatId === id) setCurrentChatId(null);
+                }}
             />
             <Chat
                 documents={documents}
                 selectedContext={selectedContext}
                 onToggleSidebar={() => setSidebarOpen(prev => !prev)}
                 loadError={loadError}
+                currentChatId={currentChatId}
+                onChatCreated={handleChatCreated}
             />
         </div>
     );

@@ -8,6 +8,7 @@ import os from 'os';
 
 import { documentsController } from './controllers/documentsController.js';
 import { register, login, verifyEmail } from './controllers/authController.js';
+import { createChat, listChats, deleteChat, getChatMessages, saveMessages } from './controllers/chatController.js';
 import { authMiddleware } from './middleware/authMiddleware.js';
 import { SUPPORTED_MODELS } from '../services/providers/supportedModels.js';
 
@@ -49,6 +50,12 @@ export function createRouter({ ingestController, queryController }: RouterDeps)
     router.post('/ingest', authMiddleware, upload.single('file'), ingestController);
     router.post('/query', authMiddleware, queryController);
     router.get('/documents', authMiddleware, documentsController);
+
+    router.post('/chats', authMiddleware, createChat);
+    router.get('/chats', authMiddleware, listChats);
+    router.delete('/chats/:id', authMiddleware, deleteChat);
+    router.get('/chats/:id/messages', authMiddleware, getChatMessages);
+    router.post('/chats/:id/messages', authMiddleware, saveMessages);
 
     router.post('/auth/register', authRateLimit, register);
     router.post('/auth/login', authRateLimit, login);

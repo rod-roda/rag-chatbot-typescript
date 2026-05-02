@@ -142,6 +142,80 @@ export async function queryDocuments(question: string, fileName?: string, modelI
     return data;
 }
 
+export interface Chat {
+    id: string;
+    title: string;
+    createdAt: string;
+}
+
+export interface StoredMessage {
+    role: 'user' | 'assistant' | 'error';
+    content: string;
+    citations?: Citation[];
+}
+
+export interface StoredMessageWithId extends StoredMessage {
+    id: string;
+    createdAt: string;
+}
+
+export async function createChat(title: string): Promise<Chat> {
+    const response = await fetch(`${API_URL}/chats`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ title }),
+    });
+    checkUnauthorized(response);
+    const data = await parseJsonResponse(response, 'Failed to create chat');
+    if (!response.ok) throw new Error(data.message ?? 'Failed to create chat');
+    return data;
+}
+
+export async function listChats(): Promise<Chat[]> {
+    const response = await fetch(`${API_URL}/chats`, {
+        headers: { ...authHeaders() },
+    });
+    checkUnauthorized(response);
+    const data = await parseJsonResponse(response, 'Failed to list chats');
+    if (!response.ok) throw new Error(data.message ?? 'Failed to list chats');
+    return data;
+}
+
+export async function deleteChat(chatId: string): Promise<void> {
+    const response = await fetch(`${API_URL}/chats/${chatId}`, {
+        method: 'DELETE',
+        headers: { ...authHeaders() },
+    });
+    checkUnauthorized(response);
+    if (!response.ok) {
+        const data = await parseJsonResponse(response, 'Failed to delete chat');
+        throw new Error(data.message ?? 'Failed to delete chat');
+    }
+}
+
+export async function getChatMessages(chatId: string): Promise<StoredMessageWithId[]> {
+    const response = await fetch(`${API_URL}/chats/${chatId}/messages`, {
+        headers: { ...authHeaders() },
+    });
+    checkUnauthorized(response);
+    const data = await parseJsonResponse(response, 'Failed to get messages');
+    if (!response.ok) throw new Error(data.message ?? 'Failed to get messages');
+    return data;
+}
+
+export async function saveMessages(chatId: string, messages: StoredMessage[]): Promise<void> {
+    const response = await fetch(`${API_URL}/chats/${chatId}/messages`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders() },
+        body: JSON.stringify({ messages }),
+    });
+    checkUnauthorized(response);
+    if (!response.ok) {
+        const data = await parseJsonResponse(response, 'Failed to save messages');
+        throw new Error(data.message ?? 'Failed to save messages');
+    }
+}
+
 export async function listDocuments(): Promise<string[]> {
     const response = await fetch(`${API_URL}/documents`, {
         headers: { ...authHeaders() },

@@ -4,21 +4,17 @@ import { useState, useEffect, useCallback } from 'react';
 import Sidebar from '@/components/Sidebar';
 import Chat from '@/components/Chat';
 import AuthForm from '@/components/AuthForm';
-import { listDocuments, listChats, getToken, removeToken, type Chat } from '@/services/api';
+import { listDocuments, listChats, getToken, removeToken, type Chat as ChatRecord } from '@/services/api';
 
 export default function Home() {
-    const [authenticated, setAuthenticated] = useState(false);
+    const [authenticated, setAuthenticated] = useState(() => !!getToken());
     const [documents, setDocuments] = useState<string[]>([]);
     const [selectedContext, setSelectedContext] = useState('');
     const [refreshTrigger, setRefreshTrigger] = useState(0);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [loadError, setLoadError] = useState(false);
-    const [chats, setChats] = useState<Chat[]>([]);
+    const [chats, setChats] = useState<ChatRecord[]>([]);
     const [currentChatId, setCurrentChatId] = useState<string | null>(null);
-
-    useEffect(() => {
-        setAuthenticated(!!getToken());
-    }, []);
 
     const handleLogout = useCallback(() => {
         removeToken();
